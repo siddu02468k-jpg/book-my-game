@@ -1,47 +1,22 @@
 {
   "users": [
     {
-      "id": "usr_demo_1",
-      "name": "Alex Johnson",
-      "email": "demo@nexus.dev",
-      "passwordHash": "$2a$10$My2CQMgCh07Fyi4jzZkgIuFXOXNoJxkQLSazb3UEWU55S2.R7cKf6",
-      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-      "createdAt": "2026-11-14T14:23:26.390Z"
-    }
-  ],
-  "items": [
-    {
-      "id": "item_1",
-      "title": "Responsive Web UI Complete",
-      "description": "Optimized touch-friendly interface designed specifically to look and behave like a native iOS and Android application.",
-      "category": "feature",
-      "status": "completed",
-      "userId": "usr_demo_1",
-      "userName": "Alex Johnson",
-      "createdAt": "2026-11-13T14:23:26.433Z",
-      "updatedAt": "2026-11-13T14:23:26.433Z"
+      "id": "usr_player_1",
+      "name": "Ravi Teja",
+      "email": "player@kurnool.dev",
+      "passwordHash": "$2a$10$y73seUPO4hqirgHQyDZkpOkkqCf6WiXNRq3DTwtFkCt0wIJnTJl6S",
+      "phone": "+91 98765 43210",
+      "role": "player",
+      "createdAt": "2026-11-15T05:30:46.517Z"
     },
     {
-      "id": "item_2",
-      "title": "Capacitor Native Mobile Bridge",
-      "description": "Native bridge configured with safe-area notch support, haptic feedback triggers, and native device status bar control.",
-      "category": "feature",
-      "status": "in-progress",
-      "userId": "usr_demo_1",
-      "userName": "Alex Johnson",
-      "createdAt": "2026-11-14T02:23:26.433Z",
-      "updatedAt": "2026-11-14T02:23:26.433Z"
-    },
-    {
-      "id": "item_3",
-      "title": "Cross-Platform REST API Endpoints",
-      "description": "Decoupled Node.js + Express backend supporting CORS for web origins and native mobile app capacitor schemes.",
-      "category": "task",
-      "status": "completed",
-      "userId": "usr_demo_1",
-      "userName": "Alex Johnson",
-      "createdAt": "2026-11-14T10:23:26.433Z",
-      "updatedAt": "2026-11-14T10:23:26.433Z"
+      "id": "usr_owner_1",
+      "name": "Suresh Reddy",
+      "email": "owner@kurnoolturf.com",
+      "passwordHash": "$2a$10$y73seUPO4hqirgHQyDZkpOkkqCf6WiXNRq3DTwtFkCt0wIJnTJl6S",
+      "phone": "+91 99887 76655",
+      "role": "owner",
+      "createdAt": "2026-11-15T05:30:46.520Z"
     }
   ],
   "sports": [
@@ -92,6 +67,264 @@
       "icon": "circle-dot",
       "emoji": "🎾",
       "isActive": true
+    }
+  ],
+  "venues": [
+    {
+      "id": "ven_1",
+      "ownerId": "usr_owner_1",
+      "name": "Spartan Sports Arena",
+      "slug": "spartan-sports-arena-budhawarpet",
+      "city": "Kurnool",
+      "area": "Budhawarpet",
+      "address": "Opp. Indoor Stadium, Near Collectorate Road, Budhawarpet, Kurnool",
+      "description": "Premier multi-sport sports complex featuring 4 BWF standard synthetic badminton courts and 2 floodlit box cricket nets with professional turf.",
+      "pricePerHour": 400,
+      "weekendPricePerHour": 500,
+      "openHour": 6,
+      "closeHour": 23,
+      "isIndoor": true,
+      "isFeatured": true,
+      "isActive": true,
+      "amenities": [
+        "Parking",
+        "Drinking Water",
+        "Changing Rooms",
+        "Floodlights",
+        "Equipment Rental",
+        "Showers"
+      ],
+      "images": [
+        "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800&auto=format&fit=crop",
+        "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=800&auto=format&fit=crop"
+      ],
+      "sports": [
+        "badminton",
+        "cricket"
+      ],
+      "rating": 4.8,
+      "reviewCount": 38,
+      "cancellationPolicy": "Free cancellation up to 2 hours before the booked slot time.",
+      "lat": 15.8281,
+      "lng": 78.0373,
+      "createdAt": "2026-11-15T05:30:46.520Z"
+    },
+    {
+      "id": "ven_2",
+      "ownerId": "usr_owner_1",
+      "name": "Kurnool Champions Turf",
+      "slug": "kurnool-champions-turf-joharapuram",
+      "city": "Kurnool",
+      "area": "Joharapuram",
+      "address": "Joharapuram Main Road, Beside Reliance Smart, Kurnool",
+      "description": "FIFA-grade 7-a-side artificial football turf and international standard box cricket arena. High-lumen LED floodlights for night tournaments.",
+      "pricePerHour": 800,
+      "weekendPricePerHour": 950,
+      "openHour": 6,
+      "closeHour": 24,
+      "isIndoor": false,
+      "isFeatured": true,
+      "isActive": true,
+      "amenities": [
+        "Parking",
+        "Drinking Water",
+        "Changing Rooms",
+        "Floodlights",
+        "Seating Dugouts"
+      ],
+      "images": [
+        "https://images.unsplash.com/photo-1529900241929-5ed537dd4966?w=800&auto=format&fit=crop",
+        "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&auto=format&fit=crop"
+      ],
+      "sports": [
+        "football",
+        "cricket"
+      ],
+      "rating": 4.9,
+      "reviewCount": 52,
+      "cancellationPolicy": "Free cancellation up to 3 hours before start time.",
+      "lat": 15.8344,
+      "lng": 78.0498,
+      "createdAt": "2026-11-15T05:30:46.520Z"
+    },
+    {
+      "id": "ven_3",
+      "ownerId": "usr_owner_1",
+      "name": "Royal Aquatic & Tennis Club",
+      "slug": "royal-aquatic-tennis-b-camp",
+      "city": "Kurnool",
+      "area": "B-Camp",
+      "address": "Near Old Bus Stand Road, B-Camp, Kurnool",
+      "description": "Olympic-size clean sanitized swimming pool with certified lifeguards, alongside 2 clay tennis courts. Dedicated coaching slots available.",
+      "pricePerHour": 300,
+      "weekendPricePerHour": 350,
+      "openHour": 6,
+      "closeHour": 21,
+      "isIndoor": false,
+      "isFeatured": true,
+      "isActive": true,
+      "amenities": [
+        "Showers",
+        "Lockers",
+        "Parking",
+        "Coaches Available",
+        "Drinking Water"
+      ],
+      "images": [
+        "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=800&auto=format&fit=crop",
+        "https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?w=800&auto=format&fit=crop"
+      ],
+      "sports": [
+        "swimming",
+        "tennis"
+      ],
+      "rating": 4.7,
+      "reviewCount": 29,
+      "cancellationPolicy": "Free cancellation up to 2 hours before the slot.",
+      "lat": 15.82,
+      "lng": 78.03,
+      "createdAt": "2026-11-15T05:30:46.520Z"
+    },
+    {
+      "id": "ven_4",
+      "ownerId": "usr_owner_1",
+      "name": "Smashers Badminton Academy",
+      "slug": "smashers-badminton-gayatri-estate",
+      "city": "Kurnool",
+      "area": "Gayatri Estate",
+      "address": "Plot 42, 2nd Cross, Gayatri Estate, Kurnool",
+      "description": "Air-conditioned wooden-floor badminton courts with Yonex anti-glare lighting and non-marking shoe rental on-site.",
+      "pricePerHour": 350,
+      "weekendPricePerHour": 450,
+      "openHour": 6,
+      "closeHour": 23,
+      "isIndoor": true,
+      "isFeatured": false,
+      "isActive": true,
+      "amenities": [
+        "Air Conditioning",
+        "Shoe Rental",
+        "Changing Rooms",
+        "Drinking Water",
+        "Parking"
+      ],
+      "images": [
+        "https://images.unsplash.com/photo-1613918431703-aa6321c252aa?w=800&auto=format&fit=crop"
+      ],
+      "sports": [
+        "badminton"
+      ],
+      "rating": 4.6,
+      "reviewCount": 19,
+      "cancellationPolicy": "Free cancellation up to 2 hours prior to slot.",
+      "lat": 15.815,
+      "lng": 78.042,
+      "createdAt": "2026-11-15T05:30:46.520Z"
+    },
+    {
+      "id": "ven_5",
+      "ownerId": "usr_owner_1",
+      "name": "Apex Pro Box Cricket & Turf",
+      "slug": "apex-box-cricket-venkayapalli",
+      "city": "Kurnool",
+      "area": "Venkayapalli",
+      "address": "Nandyal Highway Road, Venkayapalli Bypass, Kurnool",
+      "description": "Giant enclosed box cricket and basketball court with netting and high-speed pitch turf. Perfect for weekend corporate matches and team rivalries.",
+      "pricePerHour": 750,
+      "weekendPricePerHour": 900,
+      "openHour": 6,
+      "closeHour": 24,
+      "isIndoor": false,
+      "isFeatured": false,
+      "isActive": true,
+      "amenities": [
+        "Cafeteria",
+        "Sound System",
+        "Parking",
+        "Floodlights",
+        "Dugouts"
+      ],
+      "images": [
+        "https://images.unsplash.com/photo-1531415074868-036b1c57e3ce?w=800&auto=format&fit=crop"
+      ],
+      "sports": [
+        "cricket",
+        "basketball"
+      ],
+      "rating": 4.8,
+      "reviewCount": 31,
+      "cancellationPolicy": "Free cancellation up to 4 hours before the booked match.",
+      "lat": 15.805,
+      "lng": 78.065,
+      "createdAt": "2026-11-15T05:30:46.520Z"
+    }
+  ],
+  "bookings": [
+    {
+      "id": "bkg_1",
+      "bookingRef": "BMG-492018",
+      "userId": "usr_player_1",
+      "userEmail": "player@kurnool.dev",
+      "venueId": "ven_1",
+      "venueName": "Spartan Sports Arena",
+      "venueArea": "Budhawarpet",
+      "sportSlug": "badminton",
+      "sportName": "Badminton",
+      "date": "2026-11-15",
+      "startHour": 18,
+      "endHour": 19,
+      "hours": 1,
+      "playerName": "Ravi Teja",
+      "playerPhone": "+91 98765 43210",
+      "playersCount": 4,
+      "amount": 400,
+      "status": "confirmed",
+      "paymentStatus": "unpaid",
+      "paymentMethod": "pay_at_venue",
+      "createdAt": "2026-11-15T03:30:46.520Z"
+    },
+    {
+      "id": "bkg_2",
+      "bookingRef": "BMG-938172",
+      "userId": "usr_player_1",
+      "userEmail": "player@kurnool.dev",
+      "venueId": "ven_2",
+      "venueName": "Kurnool Champions Turf",
+      "venueArea": "Joharapuram",
+      "sportSlug": "football",
+      "sportName": "Football",
+      "date": "2026-11-15",
+      "startHour": 20,
+      "endHour": 22,
+      "hours": 2,
+      "playerName": "Ravi Teja",
+      "playerPhone": "+91 98765 43210",
+      "playersCount": 10,
+      "amount": 1600,
+      "status": "confirmed",
+      "paymentStatus": "unpaid",
+      "paymentMethod": "pay_at_venue",
+      "createdAt": "2026-11-15T01:30:46.520Z"
+    }
+  ],
+  "reviews": [
+    {
+      "id": "rev_1",
+      "venueId": "ven_1",
+      "userId": "usr_player_1",
+      "authorName": "Ravi Teja",
+      "rating": 5,
+      "comment": "Superb wooden courts! Lighting is totally glare-free and the staff is very polite. Best badminton in Kurnool.",
+      "createdAt": "2026-11-13T05:30:46.520Z"
+    },
+    {
+      "id": "rev_2",
+      "venueId": "ven_2",
+      "userId": "usr_anon",
+      "authorName": "Karthik Varma",
+      "rating": 5,
+      "comment": "High quality turf with good bounce for football. Floodlights are awesome for night matches.",
+      "createdAt": "2026-11-12T05:30:46.520Z"
     }
   ]
 }

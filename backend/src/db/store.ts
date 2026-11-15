@@ -40,11 +40,14 @@ class Store {
       if (fs.existsSync(DATA_FILE)) {
         const raw = fs.readFileSync(DATA_FILE, 'utf-8');
         this.data = JSON.parse(raw);
-        // Ensure sports are present
+        // Ensure sports and venues are present
         if (!this.data.sports || this.data.sports.length === 0) {
           this.data.sports = INITIAL_SPORTS;
-          this.save();
         }
+        if (!this.data.venues || this.data.venues.length === 0) {
+          this.seedInitialData();
+        }
+        this.save();
       } else {
         this.seedInitialData();
         this.save();
