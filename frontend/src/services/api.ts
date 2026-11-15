@@ -5,16 +5,16 @@ const USER_KEY = 'bmg_user_profile';
 const API_URL_KEY = 'bmg_custom_api_url';
 
 export const getDefaultApiUrl = (): string => {
+  // In production (Render, custom domain), always use relative URL so calls hit the same server
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return '';
+  }
+
   const custom = localStorage.getItem(API_URL_KEY);
   if (custom) return custom;
 
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
-  }
-
-  // When deployed to production (e.g. Render), use same-origin relative URLs
-  if (typeof window !== 'undefined' && window.location.port !== '5173' && window.location.port !== '3000') {
-    return '';
   }
 
   return 'http://localhost:5000';

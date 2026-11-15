@@ -40,11 +40,14 @@ class Store {
       if (fs.existsSync(DATA_FILE)) {
         const raw = fs.readFileSync(DATA_FILE, 'utf-8');
         this.data = JSON.parse(raw);
-        // Ensure sports are present
+        // Ensure sports and venues are present
         if (!this.data.sports || this.data.sports.length === 0) {
           this.data.sports = INITIAL_SPORTS;
-          this.save();
         }
+        if (!this.data.venues || this.data.venues.length === 0) {
+          this.seedInitialData();
+        }
+        this.save();
       } else {
         this.seedInitialData();
         this.save();
@@ -336,12 +339,18 @@ class Store {
 
   // Sports
   public getSports(): Sport[] {
+    if (!this.data.sports || this.data.sports.length === 0) {
+      this.data.sports = INITIAL_SPORTS;
+    }
     return this.data.sports;
   }
 
   // Venues
   public getVenues(filter?: { sport?: string; area?: string; search?: string; sort?: string }): Venue[] {
-    let result = this.data.venues.filter(v => v.isActive);
+    if (!this.data.venues || this.data.venues.length === 0) {
+      this.seedInitialData();
+    }
+    let result = (this.data.venues || []).filter(v => v.isActive);
 
     if (filter?.sport && filter.sport !== 'all') {
       result = result.filter(v => v.sports.includes(filter.sport!.toLowerCase()));
@@ -373,10 +382,16 @@ class Store {
   }
 
   public getVenueBySlug(slug: string): Venue | undefined {
+    if (!this.data.venues || this.data.venues.length === 0) {
+      this.seedInitialData();
+    }
     return this.data.venues.find(v => v.slug === slug);
   }
 
   public getVenueById(id: string): Venue | undefined {
+    if (!this.data.venues || this.data.venues.length === 0) {
+      this.seedInitialData();
+    }
     return this.data.venues.find(v => v.id === id);
   }
 
