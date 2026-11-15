@@ -1,0 +1,19 @@
+{
+  "name": "book-my-game",
+  "version": "1.0.0",
+  "description": "Book My Game — Kurnool Turf & Court Slot Reservation Platform",
+  "private": true,
+  "scripts": {
+    "install:all": "npm --prefix backend install && npm --prefix frontend install",
+    "build:backend": "npm --prefix backend run build",
+    "build:frontend": "npm --prefix frontend run build",
+    "build": "npm run build:backend && npm run build:frontend",
+    "start": "node backend/dist/server.js",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev": "npm run dev:backend & npm run dev:frontend"
+  },
+  "keywords": ["sports", "turf-booking", "kurnool", "render", "express", "react", "fullstack"],
+  "author": "Book My Game Team",
+  "license": "MIT"
+}

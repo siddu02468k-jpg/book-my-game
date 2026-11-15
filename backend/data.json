@@ -1,0 +1,97 @@
+{
+  "users": [
+    {
+      "id": "usr_demo_1",
+      "name": "Alex Johnson",
+      "email": "demo@nexus.dev",
+      "passwordHash": "$2a$10$My2CQMgCh07Fyi4jzZkgIuFXOXNoJxkQLSazb3UEWU55S2.R7cKf6",
+      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+      "createdAt": "2026-11-14T14:23:26.390Z"
+    }
+  ],
+  "items": [
+    {
+      "id": "item_1",
+      "title": "Responsive Web UI Complete",
+      "description": "Optimized touch-friendly interface designed specifically to look and behave like a native iOS and Android application.",
+      "category": "feature",
+      "status": "completed",
+      "userId": "usr_demo_1",
+      "userName": "Alex Johnson",
+      "createdAt": "2026-11-13T14:23:26.433Z",
+      "updatedAt": "2026-11-13T14:23:26.433Z"
+    },
+    {
+      "id": "item_2",
+      "title": "Capacitor Native Mobile Bridge",
+      "description": "Native bridge configured with safe-area notch support, haptic feedback triggers, and native device status bar control.",
+      "category": "feature",
+      "status": "in-progress",
+      "userId": "usr_demo_1",
+      "userName": "Alex Johnson",
+      "createdAt": "2026-11-14T02:23:26.433Z",
+      "updatedAt": "2026-11-14T02:23:26.433Z"
+    },
+    {
+      "id": "item_3",
+      "title": "Cross-Platform REST API Endpoints",
+      "description": "Decoupled Node.js + Express backend supporting CORS for web origins and native mobile app capacitor schemes.",
+      "category": "task",
+      "status": "completed",
+      "userId": "usr_demo_1",
+      "userName": "Alex Johnson",
+      "createdAt": "2026-11-14T10:23:26.433Z",
+      "updatedAt": "2026-11-14T10:23:26.433Z"
+    }
+  ],
+  "sports": [
+    {
+      "id": "sp_1",
+      "name": "Badminton",
+      "slug": "badminton",
+      "icon": "zap",
+      "emoji": "🏸",
+      "isActive": true
+    },
+    {
+      "id": "sp_2",
+      "name": "Cricket Nets",
+      "slug": "cricket",
+      "icon": "shield",
+      "emoji": "🏏",
+      "isActive": true
+    },
+    {
+      "id": "sp_3",
+      "name": "Football Turf",
+      "slug": "football",
+      "icon": "target",
+      "emoji": "⚽",
+      "isActive": true
+    },
+    {
+      "id": "sp_4",
+      "name": "Swimming Pool",
+      "slug": "swimming",
+      "icon": "waves",
+      "emoji": "🏊",
+      "isActive": true
+    },
+    {
+      "id": "sp_5",
+      "name": "Basketball Court",
+      "slug": "basketball",
+      "icon": "activity",
+      "emoji": "🏀",
+      "isActive": true
+    },
+    {
+      "id": "sp_6",
+      "name": "Tennis Court",
+      "slug": "tennis",
+      "icon": "circle-dot",
+      "emoji": "🎾",
+      "isActive": true
+    }
+  ]
+}

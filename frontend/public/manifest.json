@@ -1,0 +1,16 @@
+{
+  "short_name": "BookMyGame",
+  "name": "Book My Game — Kurnool Turfs & Courts",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0a0f0d",
+  "theme_color": "#22c55e",
+  "display": "standalone",
+  "orientation": "portrait"
+}
