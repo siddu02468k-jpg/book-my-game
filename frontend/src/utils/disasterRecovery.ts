@@ -18,6 +18,7 @@
 const SNAPSHOT_KEY = 'bmg_dr_snapshot';
 const SAVED_AT_KEY = 'bmg_dr_saved_at';
 const VENUE_COUNT_KEY = 'bmg_dr_venues_count';
+const DUMMY_IDS = ['ven_1', 'ven_2', 'ven_3', 'ven_4', 'ven_5'];
 
 export interface DrSnapshot {
   savedAt: string;
@@ -25,19 +26,30 @@ export interface DrSnapshot {
   backupData: any;
 }
 
-/** Save full backup JSON to localStorage. Called after each successful owner data fetch. */
+/** Save full backup JSON to localStorage. */
 export function saveLocalSnapshot(backupData: any): void {
   try {
+    if (!backupData || !Array.isArray(backupData.venues)) return;
+    
+    // Filter out legacy dummy venues before saving snapshot
+    const realVenues = backupData.venues.filter((v: any) => !DUMMY_IDS.includes(v.id));
+    if (realVenues.length === 0) {
+      clearLocalSnapshot();
+      return;
+    }
+
     const snapshot: DrSnapshot = {
       savedAt: new Date().toISOString(),
-      venuesCount: Array.isArray(backupData?.venues) ? backupData.venues.length : 0,
-      backupData
+      venuesCount: realVenues.length,
+      backupData: {
+        ...backupData,
+        venues: realVenues
+      }
     };
     localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snapshot));
     localStorage.setItem(SAVED_AT_KEY, snapshot.savedAt);
     localStorage.setItem(VENUE_COUNT_KEY, String(snapshot.venuesCount));
   } catch (err) {
-    // localStorage quota exceeded or private browsing — silent fail
     console.warn('[DR] Could not save local snapshot:', err);
   }
 }
@@ -47,17 +59,45 @@ export function loadLocalSnapshot(): DrSnapshot | null {
   try {
     const raw = localStorage.getItem(SNAPSHOT_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as DrSnapshot;
+    const snap = JSON.parse(raw) as DrSnapshot;
+    
+    // Purge legacy dummy snapshots automatically
+    if (Array.isArray(snap.backupData?.venues)) {
+      const real = snap.backupData.venues.filter((v: any) => !DUMMY_IDS.includes(v.id));
+      if (real.length === 0) {
+        clearLocalSnapshot();
+        return null;
+      }
+      snap.venuesCount = real.length;
+      snap.backupData.venues = real;
+    }
+    return snap;
   } catch {
     return null;
   }
 }
 
-/** Returns true if the server appears freshly wiped (0 venues) but we have a local snapshot with venues. */
+/** Returns true if the server appears freshly wiped (0 venues) but we have a valid snapshot of REAL registered venues. */
 export function needsRecovery(serverVenueCount: number): boolean {
-  if (serverVenueCount > 0) return false; // server has data — no recovery needed
-  const storedCount = parseInt(localStorage.getItem(VENUE_COUNT_KEY) || '0', 10);
-  return storedCount > 0;
+  if (serverVenueCount > 0) return false;
+  if (sessionStorage.getItem('bmg_dr_dismissed') === 'true') return false;
+
+  const snap = loadLocalSnapshot();
+  if (!snap || !Array.isArray(snap.backupData?.venues)) return false;
+
+  const realVenues = snap.backupData.venues.filter((v: any) => !DUMMY_IDS.includes(v.id));
+  if (realVenues.length === 0) {
+    clearLocalSnapshot();
+    return false;
+  }
+
+  return true;
+}
+
+/** Dismiss recovery and clear any old snapshot. */
+export function dismissRecovery(): void {
+  clearLocalSnapshot();
+  sessionStorage.setItem('bmg_dr_dismissed', 'true');
 }
 
 /** How long ago was the last snapshot? Returns a human-readable string. */
@@ -82,7 +122,7 @@ export function snapshotAgeDays(): number {
   return diffMs / (1000 * 60 * 60 * 24);
 }
 
-/** Clear the local snapshot (call after a successful server restore). */
+/** Clear the local snapshot. */
 export function clearLocalSnapshot(): void {
   localStorage.removeItem(SNAPSHOT_KEY);
   localStorage.removeItem(SAVED_AT_KEY);

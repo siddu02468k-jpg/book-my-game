@@ -54,6 +54,13 @@ class Store {
         if (!Array.isArray(this.data.reviews)) {
           this.data.reviews = [];
         }
+
+        // Hard purge of any legacy dummy venues (ven_1 through ven_5)
+        const dummyIds = ['ven_1', 'ven_2', 'ven_3', 'ven_4', 'ven_5'];
+        this.data.venues = this.data.venues.filter(v => !dummyIds.includes(v.id));
+        this.data.bookings = this.data.bookings.filter(b => !dummyIds.includes(b.venueId));
+        this.data.reviews = this.data.reviews.filter(r => !dummyIds.includes(r.venueId));
+
         this.save();
       } else {
         this.seedInitialData();
@@ -160,10 +167,8 @@ class Store {
 
   // Venues
   public getVenues(filter?: { sport?: string; area?: string; search?: string; sort?: string }): Venue[] {
-    if (!this.data.venues || this.data.venues.length === 0) {
-      this.seedInitialData();
-    }
-    let result = (this.data.venues || []).filter(v => v.isActive);
+    const dummyIds = ['ven_1', 'ven_2', 'ven_3', 'ven_4', 'ven_5'];
+    let result = (this.data.venues || []).filter(v => v.isActive && !dummyIds.includes(v.id));
 
     if (filter?.sport && filter.sport !== 'all') {
       result = result.filter(v => v.sports.includes(filter.sport!.toLowerCase()));
@@ -195,21 +200,16 @@ class Store {
   }
 
   public getVenueBySlug(slug: string): Venue | undefined {
-    if (!this.data.venues || this.data.venues.length === 0) {
-      this.seedInitialData();
-    }
-    return this.data.venues.find(v => v.slug === slug);
+    return (this.data.venues || []).find(v => v.slug === slug && !['ven_1', 'ven_2', 'ven_3', 'ven_4', 'ven_5'].includes(v.id));
   }
 
   public getVenueById(id: string): Venue | undefined {
-    if (!this.data.venues || this.data.venues.length === 0) {
-      this.seedInitialData();
-    }
-    return this.data.venues.find(v => v.id === id);
+    return (this.data.venues || []).find(v => v.id === id && !['ven_1', 'ven_2', 'ven_3', 'ven_4', 'ven_5'].includes(v.id));
   }
 
   public getOwnerVenues(ownerId: string): Venue[] {
-    return this.data.venues.filter(v => v.ownerId === ownerId);
+    const dummyIds = ['ven_1', 'ven_2', 'ven_3', 'ven_4', 'ven_5'];
+    return (this.data.venues || []).filter(v => v.ownerId === ownerId && !dummyIds.includes(v.id));
   }
 
   public createVenue(venue: Venue): Venue {
@@ -403,14 +403,16 @@ class Store {
       return false;
     }
 
-    if (Array.isArray(imported.venues) && imported.venues.length > 0) {
-      this.data.venues = imported.venues;
+    const dummyIds = ['ven_1', 'ven_2', 'ven_3', 'ven_4', 'ven_5'];
+
+    if (Array.isArray(imported.venues)) {
+      this.data.venues = imported.venues.filter((v: any) => !dummyIds.includes(v.id));
     }
     if (Array.isArray(imported.bookings)) {
-      this.data.bookings = imported.bookings;
+      this.data.bookings = imported.bookings.filter((b: any) => !dummyIds.includes(b.venueId));
     }
     if (Array.isArray(imported.reviews)) {
-      this.data.reviews = imported.reviews;
+      this.data.reviews = imported.reviews.filter((r: any) => !dummyIds.includes(r.venueId));
     }
     if (Array.isArray(imported.sports) && imported.sports.length > 0) {
       this.data.sports = imported.sports;

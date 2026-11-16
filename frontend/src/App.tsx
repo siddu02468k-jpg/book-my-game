@@ -11,7 +11,7 @@ import { ProfileView } from './components/ProfileView';
 import { User, Venue, Sport, Booking, BackendHealth } from './types';
 import { api } from './services/api';
 import { initMobileStatusBar, triggerHaptic } from './utils/device';
-import { saveLocalSnapshot, loadLocalSnapshot, needsRecovery, snapshotAge, snapshotAgeDays } from './utils/disasterRecovery';
+import { saveLocalSnapshot, loadLocalSnapshot, needsRecovery, snapshotAge, snapshotAgeDays, dismissRecovery } from './utils/disasterRecovery';
 import { Smartphone, ShieldCheck, AlertTriangle, RefreshCw } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -46,6 +46,16 @@ export const App: React.FC = () => {
   const [snapshotInfo, setSnapshotInfo] = useState<{ age: string; days: number; count: number } | null>(null);
 
   useEffect(() => {
+    // Purge any legacy dummy snapshot stored in the user's browser localStorage
+    try {
+      const snap = localStorage.getItem('bmg_dr_snapshot');
+      if (snap && (snap.includes('ven_1') || snap.includes('Spartan Sports Arena'))) {
+        localStorage.removeItem('bmg_dr_snapshot');
+        localStorage.removeItem('bmg_dr_saved_at');
+        localStorage.removeItem('bmg_dr_venues_count');
+      }
+    } catch {}
+
     initMobileStatusBar();
     setUser(api.getStoredUser());
     fetchInitialData();
@@ -115,13 +125,11 @@ export const App: React.FC = () => {
       setOwnerBookings(bData);
 
       // === DISASTER RECOVERY: Auto-snapshot to localStorage ===
-      // Every time we successfully fetch owner data, save a full backup to browser storage
       try {
         const backupData = await api.exportBackup();
         saveLocalSnapshot(backupData);
-        // Check if the server is empty but we have a snapshot (indicates fresh Render wipe)
-        const venueCount = Array.isArray(vData) ? vData.length : 0;
-        if (needsRecovery(venueCount)) {
+        // Only trigger recovery if the entire platform has 0 venues AND there are real venues in snapshot
+        if (needsRecovery(venues.length)) {
           const snap = loadLocalSnapshot();
           if (snap) {
             setDrSnapshot(snap.backupData);
@@ -155,6 +163,12 @@ export const App: React.FC = () => {
     } finally {
       setDrRestoring(false);
     }
+  };
+
+  const handleDrSkip = () => {
+    dismissRecovery();
+    setDrBannerVisible(false);
+    setDrSnapshot(null);
   };
 
   // Filter actions
@@ -332,7 +346,7 @@ export const App: React.FC = () => {
                 <span>{drRestoring ? 'Restoring...' : 'Restore Now (Auto)'}</span>
               </button>
               <button
-                onClick={() => setDrBannerVisible(false)}
+                onClick={handleDrSkip}
                 className="px-4 py-3 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs hover:bg-slate-700 transition"
               >
                 Skip
