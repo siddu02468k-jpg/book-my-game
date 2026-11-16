@@ -232,17 +232,23 @@ export const VenuesCatalogView: React.FC<VenuesCatalogViewProps> = ({
             <span>Finding verified courts...</span>
           </div>
         ) : displayVenues.length === 0 ? (
-          <div className="text-center py-16 bg-[#111815] border border-[#1e2923] rounded-3xl p-6">
-            <p className="text-base font-bold text-white">No venues found</p>
-            <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-              No matching sports venues in Kurnool for your current filters. Try resetting your search.
+          <div className="text-center py-16 bg-[#111815] border border-dashed border-[#1e2923] rounded-3xl p-6">
+            <p className="text-base font-bold text-white uppercase">
+              {venues.length === 0 ? 'No Turfs Registered in Kurnool Yet' : 'No venues found'}
             </p>
-            <button
-              onClick={onResetFilters}
-              className="mt-4 px-4 py-2 rounded-xl bg-sport-500 text-black text-xs font-bold shadow-glow-sm"
-            >
-              Show All Venues
-            </button>
+            <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+              {venues.length === 0
+                ? 'Only verified turf owners who register their grounds with photos and receiving UPI appear here. Are you a venue owner? Register your turf in the Owner Portal!'
+                : 'No matching sports venues in Kurnool for your current filters. Try resetting your search.'}
+            </p>
+            {venues.length > 0 && (
+              <button
+                onClick={onResetFilters}
+                className="mt-4 px-4 py-2 rounded-xl bg-sport-500 text-black text-xs font-bold shadow-glow-sm"
+              >
+                Show All Venues
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

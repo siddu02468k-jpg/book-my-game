@@ -8,12 +8,12 @@ import {
   Users, 
   AlertCircle, 
   Share2, 
-  CreditCard, 
   IndianRupee,
   Smartphone,
   ArrowRight,
-  Download,
-  QrCode
+  QrCode,
+  ShieldCheck,
+  ExternalLink
 } from 'lucide-react';
 import { Venue, SlotAvailability, Booking } from '../types';
 import { api } from '../services/api';
@@ -46,8 +46,12 @@ export const SlotBookingModal: React.FC<SlotBookingModalProps> = ({
   const [loadingSlots, setLoadingSlots] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Stages: 'booking' -> 'upi_payment' (if online pay selected) -> 'confirmed'
+  const [currentStage, setCurrentStage] = useState<'booking' | 'upi_payment' | 'confirmed'>('booking');
+  const [pendingBooking, setPendingBooking] = useState<Booking | null>(null);
   const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null);
-  const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
+  const [razorpayKey, setRazorpayKey] = useState<string>('');
 
   useEffect(() => {
     if (venue) {
@@ -58,6 +62,9 @@ export const SlotBookingModal: React.FC<SlotBookingModalProps> = ({
         if (user.phone) setPlayerPhone(user.phone);
       }
       fetchSlots(venue.id, selectedDate);
+      api.getPaymentConfig().then((cfg) => {
+        if (cfg?.razorpayKeyId) setRazorpayKey(cfg.razorpayKeyId);
+      });
     }
   }, [venue, selectedDate]);
 
@@ -97,7 +104,7 @@ export const SlotBookingModal: React.FC<SlotBookingModalProps> = ({
     setSelectedStartHour(hour);
   };
 
-  const handleConfirmBooking = async (e: React.FormEvent) => {
+  const handleStartBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedStartHour === null) {
       setError('Please select an available start slot from the matrix below.');
@@ -122,20 +129,35 @@ export const SlotBookingModal: React.FC<SlotBookingModalProps> = ({
         playersCount,
       });
 
-      // If user chose UPI online payment, verify mock transaction
-      if (paymentChoice === 'upi') {
-        setIsProcessingPayment(true);
-        await api.verifyPayment(booking.id, `UPI_TXN_${Date.now()}`, 'upi');
-        booking.paymentStatus = 'paid';
-        booking.paymentMethod = 'upi';
-        setIsProcessingPayment(false);
-      }
-
       triggerHaptic();
-      setConfirmedBooking(booking);
-      onBookingSuccess(booking);
+
+      if (paymentChoice === 'upi') {
+        setPendingBooking(booking);
+        setCurrentStage('upi_payment');
+      } else {
+        setConfirmedBooking(booking);
+        setCurrentStage('confirmed');
+        onBookingSuccess(booking);
+      }
     } catch (err: any) {
       setError(err.message || 'Booking failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Called when user completes UPI transfer or clicks verify
+  const handleCompleteUpiPayment = async () => {
+    if (!pendingBooking) return;
+    try {
+      setSubmitting(true);
+      const updated = await api.verifyPayment(pendingBooking.id, `UPI_REF_${Date.now()}`, 'upi');
+      triggerHaptic();
+      setConfirmedBooking(updated);
+      setCurrentStage('confirmed');
+      onBookingSuccess(updated);
+    } catch (err: any) {
+      setError(err.message || 'Payment verification failed');
     } finally {
       setSubmitting(false);
     }
@@ -171,20 +193,20 @@ _Show this message to the venue operator upon arrival._`;
   const checkDate = new Date(selectedDate);
   const isWeekend = checkDate.getDay() === 0 || checkDate.getDay() === 6;
   const currentHourlyRate = (isWeekend && venue.weekendPricePerHour) ? venue.weekendPricePerHour : venue.pricePerHour;
-  const totalAmount = currentHourlyRate * duration;
+  const baseSlotAmount = currentHourlyRate * duration; // Turf Owner's full base price (e.g. ₹1,000)
+  const platformFee = Math.round(baseSlotAmount * (venue.commissionRate || 0.09)); // 9% Platform Fee added on top (e.g. ₹90)
+  const totalAmount = baseSlotAmount + platformFee; // Total customer pays (e.g. ₹1,090)
 
-  // QR Code URL encoding booking details
-  const qrCodeUrl = confirmedBooking
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
-        JSON.stringify({
-          app: 'BookMyGame',
-          ref: confirmedBooking.bookingRef,
-          venue: confirmedBooking.venueName,
-          slot: `${confirmedBooking.date} ${confirmedBooking.startHour}:00-${confirmedBooking.endHour}:00`,
-          amount: confirmedBooking.amount,
-          paid: confirmedBooking.paymentStatus === 'paid'
-        })
-      )}&color=22c55e&bgcolor=0f1512`
+  // Method 1: Real NPCI standard UPI Payment Payload directly to Venue Owner
+  const upiId = venue.ownerUpiId || 'bookmygame@upi';
+  const bookingRefForUpi = pendingBooking?.bookingRef || 'BMG';
+  const upiPayPayload = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(venue.name)}&am=${totalAmount}.00&cu=INR&tn=${encodeURIComponent('Slot Booking ' + bookingRefForUpi)}`;
+  const upiPaymentQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiPayPayload)}`;
+
+  // Scannable Entry Pass QR for Venue Operator Check-in
+  const entryPassPayload = confirmedBooking ? confirmedBooking.bookingRef : '';
+  const entryPassQrUrl = confirmedBooking
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(entryPassPayload)}&color=22c55e&bgcolor=0f1512`
     : '';
 
   return (
@@ -216,8 +238,64 @@ _Show this message to the venue operator upon arrival._`;
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5 smooth-scroll">
           
-          {/* Confirmed Ticket Screen with QR Code and WhatsApp share */}
-          {confirmedBooking ? (
+          {/* STAGE 2: REAL UPI PAYMENT QR CODE TO TURF OWNER */}
+          {currentStage === 'upi_payment' && pendingBooking && (
+            <div className="py-4 text-center space-y-4">
+              <span className="text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full bg-sport-500/10 text-sport-400 border border-sport-500/20">
+                Direct Payment to Turf Owner
+              </span>
+              <h3 className="text-xl font-black text-white">
+                Pay ₹{totalAmount} to {venue.name}
+              </h3>
+              <p className="text-xs text-slate-300 max-w-xs mx-auto">
+                Scan with PhonePe, Google Pay, or Paytm. 100% of your payment transfers instantly to the turf owner's bank account.
+              </p>
+              <div className="flex items-center justify-center space-x-2 text-xs text-slate-400">
+                <span>Court Fee: <strong className="text-white">₹{baseSlotAmount}</strong></span>
+                <span>•</span>
+                <span>Convenience Fee (9%): <strong className="text-sport-400">₹{platformFee}</strong></span>
+              </div>
+
+              {/* Real UPI QR Box */}
+              <div className="bg-white p-4 rounded-3xl max-w-[240px] mx-auto shadow-glow flex flex-col items-center justify-center">
+                <img 
+                  src={upiPaymentQrUrl} 
+                  alt="UPI Payment QR" 
+                  className="w-48 h-48 rounded-xl object-contain"
+                />
+                <span className="text-[11px] font-bold text-black mt-2 font-mono">
+                  UPI ID: {upiId}
+                </span>
+                <span className="text-[9px] text-slate-500 mt-0.5">
+                  Verified NPCI Direct Transfer
+                </span>
+              </div>
+
+              {/* Direct UPI Intent Link for Mobile */}
+              <div className="pt-2 max-w-xs mx-auto space-y-2">
+                <a
+                  href={upiPayPayload}
+                  className="w-full py-2.5 rounded-xl bg-sport-500 hover:bg-sport-400 text-black font-extrabold text-xs shadow-glow flex items-center justify-center space-x-1 transition"
+                >
+                  <Smartphone className="w-4 h-4" />
+                  <span>Open UPI App on Phone</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={handleCompleteUpiPayment}
+                  disabled={submitting}
+                  className="w-full py-2.5 rounded-xl bg-[#16201b] hover:bg-[#1f2c25] text-sport-400 border border-sport-500/40 font-bold text-xs flex items-center justify-center space-x-1 transition"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{submitting ? 'Verifying...' : 'I Have Paid (Get Match Pass)'}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STAGE 3: MATCH ENTRY PASS TICKET */}
+          {currentStage === 'confirmed' && confirmedBooking && (
             <div className="py-4 text-center space-y-4">
               <div className="w-14 h-14 rounded-full bg-sport-500/20 text-sport-400 border border-sport-500/40 flex items-center justify-center mx-auto shadow-glow">
                 <CheckCircle2 className="w-8 h-8" />
@@ -230,11 +308,11 @@ _Show this message to the venue operator upon arrival._`;
                   Pass Ref: {confirmedBooking.bookingRef}
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  Present this QR pass to the turf operator upon arrival.
+                  Show this match entry pass to the turf operator when you arrive.
                 </p>
               </div>
 
-              {/* High-Tech Scannable Digital Ticket */}
+              {/* Scannable Match Entry Pass Card */}
               <div className="bg-[#16201b] border border-sport-500/40 rounded-3xl p-5 text-left max-w-sm mx-auto shadow-glow relative overflow-hidden">
                 <div className="flex items-center justify-between pb-3 border-b border-[#1e2923]">
                   <div>
@@ -248,12 +326,12 @@ _Show this message to the venue operator upon arrival._`;
                   </div>
                 </div>
 
-                {/* QR Code Container */}
+                {/* Entry Pass QR Code (Scannable by Owner Console) */}
                 <div className="py-4 flex flex-col items-center justify-center">
                   <div className="p-2.5 rounded-2xl bg-[#0f1512] border border-sport-500/30 shadow-inner">
                     <img 
-                      src={qrCodeUrl} 
-                      alt={`QR Pass ${confirmedBooking.bookingRef}`} 
+                      src={entryPassQrUrl} 
+                      alt={`Pass ${confirmedBooking.bookingRef}`} 
                       className="w-36 h-36 rounded-lg object-contain" 
                     />
                   </div>
@@ -285,7 +363,7 @@ _Show this message to the venue operator upon arrival._`;
                 </div>
               </div>
 
-              {/* Action Buttons */}
+              {/* WhatsApp Share Button */}
               <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2 max-w-sm mx-auto">
                 <button
                   type="button"
@@ -309,8 +387,11 @@ _Show this message to the venue operator upon arrival._`;
               </div>
 
             </div>
-          ) : (
-            <form onSubmit={handleConfirmBooking} className="space-y-5">
+          )}
+
+          {/* STAGE 1: BOOKING FORM */}
+          {currentStage === 'booking' && (
+            <form onSubmit={handleStartBooking} className="space-y-5">
               
               {/* Error banner */}
               {error && (
@@ -560,37 +641,50 @@ _Show this message to the venue operator upon arrival._`;
                     <Smartphone className="w-5 h-5 text-sport-400 flex-shrink-0 mt-0.5" />
                     <div>
                       <span className="font-bold text-xs text-white block">UPI / Online Pay</span>
-                      <span className="text-[10px] text-slate-400">PhonePe, Google Pay, Paytm & Cards</span>
+                      <span className="text-[10px] text-slate-400">PhonePe, Google Pay, Paytm & QR code</span>
                     </div>
                   </button>
                 </div>
               </div>
 
               {/* Order Summary & Submit Button */}
-              <div className="bg-[#16201b] border border-[#1e2923] p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div>
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-bold">Total Amount</span>
-                  <div className="flex items-baseline space-x-1.5">
-                    <span className="text-2xl font-black text-white">₹{totalAmount}</span>
-                    <span className="text-xs text-sport-400 font-semibold">
-                      {paymentChoice === 'upi' ? '(Online UPI)' : '(Pay at venue)'}
-                    </span>
+              <div className="bg-[#16201b] border border-[#1e2923] p-4 rounded-2xl space-y-3">
+                <div className="space-y-1.5 text-xs text-slate-300">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Court Slot Rate ({duration} hr)</span>
+                    <span className="text-white font-medium">₹{baseSlotAmount}</span>
                   </div>
-                  {isWeekend && (
-                    <span className="text-[10px] text-amber-400 block font-medium">Weekend pricing applies</span>
-                  )}
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Platform Convenience Fee (9%)</span>
+                    <span className="text-sport-400 font-medium">+₹{platformFee}</span>
+                  </div>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={submitting || selectedStartHour === null}
-                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-sport-500 hover:bg-sport-400 text-black font-extrabold text-sm transition shadow-glow active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-                >
-                  <span>
-                    {submitting ? 'Confirming...' : paymentChoice === 'upi' ? `Pay ₹${totalAmount} via UPI` : 'Confirm Slot'}
-                  </span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
+                <div className="pt-2 border-t border-[#1e2923] flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-bold">Total Payable</span>
+                    <div className="flex items-baseline space-x-1.5">
+                      <span className="text-2xl font-black text-white">₹{totalAmount}</span>
+                      <span className="text-xs text-sport-400 font-semibold">
+                        {paymentChoice === 'upi' ? '(Online UPI)' : '(Pay at venue)'}
+                      </span>
+                    </div>
+                    {isWeekend && (
+                      <span className="text-[10px] text-amber-400 block font-medium">Weekend pricing applies</span>
+                    )}
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={submitting || selectedStartHour === null}
+                    className="w-full sm:w-auto px-6 py-3 rounded-xl bg-sport-500 hover:bg-sport-400 text-black font-extrabold text-sm transition shadow-glow active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                  >
+                    <span>
+                      {submitting ? 'Confirming...' : paymentChoice === 'upi' ? `Pay ₹${totalAmount} via UPI` : 'Confirm Slot'}
+                    </span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
             </form>

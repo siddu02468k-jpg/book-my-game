@@ -11,7 +11,8 @@ import { ProfileView } from './components/ProfileView';
 import { User, Venue, Sport, Booking, BackendHealth } from './types';
 import { api } from './services/api';
 import { initMobileStatusBar, triggerHaptic } from './utils/device';
-import { Smartphone } from 'lucide-react';
+import { saveLocalSnapshot, loadLocalSnapshot, needsRecovery, snapshotAge, snapshotAgeDays } from './utils/disasterRecovery';
+import { Smartphone, ShieldCheck, AlertTriangle, RefreshCw } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<TabType>('home');
@@ -36,6 +37,13 @@ export const App: React.FC = () => {
   const [isSimulatedMobile, setIsSimulatedMobile] = useState<boolean>(false);
   const [loadingVenues, setLoadingVenues] = useState<boolean>(false);
   const [newBookingId, setNewBookingId] = useState<string | null>(null);
+
+  // Disaster Recovery
+  const [drBannerVisible, setDrBannerVisible] = useState<boolean>(false);
+  const [drSnapshot, setDrSnapshot] = useState<any>(null);
+  const [drRestoring, setDrRestoring] = useState<boolean>(false);
+  const [drRestoredMsg, setDrRestoredMsg] = useState<string | null>(null);
+  const [snapshotInfo, setSnapshotInfo] = useState<{ age: string; days: number; count: number } | null>(null);
 
   useEffect(() => {
     initMobileStatusBar();
@@ -105,8 +113,47 @@ export const App: React.FC = () => {
       ]);
       setOwnerVenues(vData);
       setOwnerBookings(bData);
+
+      // === DISASTER RECOVERY: Auto-snapshot to localStorage ===
+      // Every time we successfully fetch owner data, save a full backup to browser storage
+      try {
+        const backupData = await api.exportBackup();
+        saveLocalSnapshot(backupData);
+        // Check if the server is empty but we have a snapshot (indicates fresh Render wipe)
+        const venueCount = Array.isArray(vData) ? vData.length : 0;
+        if (needsRecovery(venueCount)) {
+          const snap = loadLocalSnapshot();
+          if (snap) {
+            setDrSnapshot(snap.backupData);
+            setSnapshotInfo({
+              age: snapshotAge(),
+              days: snapshotAgeDays(),
+              count: snap.venuesCount
+            });
+            setDrBannerVisible(true);
+          }
+        }
+      } catch (snapErr) {
+        console.warn('[DR] Snapshot failed (non-critical):', snapErr);
+      }
     } catch {
       // Ignored
+    }
+  };
+
+  const handleDrRestore = async () => {
+    if (!drSnapshot) return;
+    try {
+      setDrRestoring(true);
+      await api.restoreBackup(drSnapshot);
+      setDrRestoredMsg('✅ All your venues and bookings have been restored successfully!');
+      setDrBannerVisible(false);
+      setTimeout(() => setDrRestoredMsg(null), 6000);
+      await fetchOwnerData();
+    } catch (err: any) {
+      alert(err.message || 'Restore failed — try using the manual restore in Manager Console.');
+    } finally {
+      setDrRestoring(false);
     }
   };
 
@@ -234,6 +281,74 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background text-slate-100 flex flex-col font-sans">
+
+      {/* ============================================================
+          DISASTER RECOVERY BANNER
+          Shown automatically when Render wipes data.json and we have
+          a fresh localStorage snapshot to restore from.
+      ============================================================ */}
+      {drBannerVisible && drSnapshot && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+          <div className="bg-[#0f1512] border border-rose-800 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2.5 rounded-xl bg-rose-950/60 text-rose-400 flex-shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-white uppercase tracking-tight">Server Data Wiped!</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Render redeployment detected — the server database has been reset.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-[#16201b] border border-sport-500/30 rounded-xl p-3 text-xs space-y-1">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Recovery Source</span>
+                <span className="text-sport-400 font-bold">Your Browser Cache</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Snapshot saved</span>
+                <span className="text-white font-bold">{snapshotInfo?.age || '—'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Venues in snapshot</span>
+                <span className="text-white font-bold">{snapshotInfo?.count || 0} venue(s)</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              A complete backup was automatically saved in your browser's local storage.
+              Click <strong className="text-sport-400">Restore Now</strong> to recover all your venues, bookings, and reviews instantly — no file upload needed.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleDrRestore}
+                disabled={drRestoring}
+                className="flex-1 flex items-center justify-center space-x-2 py-3 rounded-xl bg-sport-500 hover:bg-sport-400 text-black font-extrabold text-sm shadow-glow transition disabled:opacity-50 active:scale-95"
+              >
+                <RefreshCw className={`w-4 h-4 ${drRestoring ? 'animate-spin' : ''}`} />
+                <span>{drRestoring ? 'Restoring...' : 'Restore Now (Auto)'}</span>
+              </button>
+              <button
+                onClick={() => setDrBannerVisible(false)}
+                className="px-4 py-3 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs hover:bg-slate-700 transition"
+              >
+                Skip
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success banner after DR restore */}
+      {drRestoredMsg && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[199] bg-[#111815] border border-sport-500/60 text-sport-400 text-sm font-bold px-5 py-3 rounded-2xl shadow-glow flex items-center space-x-2">
+          <ShieldCheck className="w-5 h-5" />
+          <span>{drRestoredMsg}</span>
+        </div>
+      )}
       
       {/* Desktop Simulation Mode Frame */}
       {isSimulatedMobile ? (

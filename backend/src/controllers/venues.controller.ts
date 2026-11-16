@@ -47,8 +47,18 @@ export const getSports = (_req: Request, res: Response): void => {
 
 export const getAreas = (_req: Request, res: Response): void => {
   const venues = store.getVenues();
-  const areas = Array.from(new Set(venues.map(v => v.area)));
-  res.json({ success: true, data: areas });
+  const venueAreas = Array.from(new Set(venues.map(v => v.area)));
+  const defaultAreas = [
+    'Budhawarpet', 
+    'Joharapuram', 
+    'B-Camp', 
+    'Gayatri Estate', 
+    'Venkayapalli', 
+    'Collectorate Road', 
+    'Nandyal Road'
+  ];
+  const combined = Array.from(new Set([...defaultAreas, ...venueAreas])).filter(Boolean);
+  res.json({ success: true, data: combined });
 };
 
 export const addVenueReview = (req: AuthenticatedRequest, res: Response): void => {
@@ -66,13 +76,19 @@ export const addVenueReview = (req: AuthenticatedRequest, res: Response): void =
     return;
   }
 
+  // Sanitize comment to strip any raw HTML / scripts
+  const sanitizedComment = String(comment)
+    .replace(/<[^>]*>?/gm, '')
+    .trim()
+    .slice(0, 500);
+
   const newReview: Review = {
     id: `rev_${Date.now()}`,
     venueId,
     userId: req.userId || 'usr_player_1',
-    authorName: authorName || req.userEmail || 'Player from Kurnool',
-    rating: Number(rating),
-    comment,
+    authorName: String(authorName || req.userEmail || 'Player from Kurnool').replace(/<[^>]*>?/gm, '').trim().slice(0, 50),
+    rating: Math.min(5, Math.max(1, Number(rating) || 5)),
+    comment: sanitizedComment,
     createdAt: new Date().toISOString()
   };
 

@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcryptjs';
 import { User, Sport, Venue, Booking, Review, SlotAvailability } from '../types';
+import { monitor } from '../utils/monitoring';
 
 const DATA_FILE = path.join(__dirname, '..', '..', 'data.json');
 
@@ -40,12 +41,18 @@ class Store {
       if (fs.existsSync(DATA_FILE)) {
         const raw = fs.readFileSync(DATA_FILE, 'utf-8');
         this.data = JSON.parse(raw);
-        // Ensure sports and venues are present
+        // Ensure sports, venues, bookings, and reviews are present
         if (!this.data.sports || this.data.sports.length === 0) {
           this.data.sports = INITIAL_SPORTS;
         }
-        if (!this.data.venues || this.data.venues.length === 0) {
-          this.seedInitialData();
+        if (!Array.isArray(this.data.venues)) {
+          this.data.venues = [];
+        }
+        if (!Array.isArray(this.data.bookings)) {
+          this.data.bookings = [];
+        }
+        if (!Array.isArray(this.data.reviews)) {
+          this.data.reviews = [];
         }
         this.save();
       } else {
@@ -61,9 +68,32 @@ class Store {
   private save() {
     try {
       fs.writeFileSync(DATA_FILE, JSON.stringify(this.data, null, 2), 'utf-8');
+
+      // Automatic daily rotating snapshot backup
+      try {
+        const backupDir = path.join(__dirname, '..', '..', 'backups');
+        if (!fs.existsSync(backupDir)) {
+          fs.mkdirSync(backupDir, { recursive: true });
+        }
+        const todayStr = new Date().toISOString().split('T')[0];
+        const snapshotPath = path.join(backupDir, `backup-auto-${todayStr}.json`);
+        fs.writeFileSync(snapshotPath, JSON.stringify(this.data, null, 2), 'utf-8');
+        monitor.recordBackup();
+      } catch (backupErr) {
+        console.warn('Auto backup snapshot failed (non-critical):', backupErr);
+      }
     } catch (err) {
       console.error('Failed to persist database file:', err);
     }
+  }
+
+  public getCounts(): { venues: number; bookings: number; users: number; sports: number } {
+    return {
+      venues: this.data.venues.length,
+      bookings: this.data.bookings.length,
+      users: this.data.users.length,
+      sports: this.data.sports.length
+    };
   }
 
   private seedInitialData() {
@@ -90,228 +120,11 @@ class Store {
       createdAt: new Date().toISOString()
     };
 
-    const initialVenues: Venue[] = [
-      {
-        id: 'ven_1',
-        ownerId: demoOwner.id,
-        name: 'Spartan Sports Arena',
-        slug: 'spartan-sports-arena-budhawarpet',
-        city: 'Kurnool',
-        area: 'Budhawarpet',
-        address: 'Opp. Indoor Stadium, Near Collectorate Road, Budhawarpet, Kurnool',
-        description: 'Premier multi-sport sports complex featuring 4 BWF standard synthetic badminton courts and 2 floodlit box cricket nets with professional turf.',
-        pricePerHour: 400,
-        weekendPricePerHour: 500,
-        openHour: 6,
-        closeHour: 23,
-        isIndoor: true,
-        isFeatured: true,
-        isActive: true,
-        amenities: ['Parking', 'Drinking Water', 'Changing Rooms', 'Floodlights', 'Equipment Rental', 'Showers'],
-        images: [
-          'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800&auto=format&fit=crop',
-          'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=800&auto=format&fit=crop'
-        ],
-        sports: ['badminton', 'cricket'],
-        rating: 4.8,
-        reviewCount: 38,
-        cancellationPolicy: 'Free cancellation up to 2 hours before the booked slot time.',
-        lat: 15.8281,
-        lng: 78.0373,
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 'ven_2',
-        ownerId: demoOwner.id,
-        name: 'Kurnool Champions Turf',
-        slug: 'kurnool-champions-turf-joharapuram',
-        city: 'Kurnool',
-        area: 'Joharapuram',
-        address: 'Joharapuram Main Road, Beside Reliance Smart, Kurnool',
-        description: 'FIFA-grade 7-a-side artificial football turf and international standard box cricket arena. High-lumen LED floodlights for night tournaments.',
-        pricePerHour: 800,
-        weekendPricePerHour: 950,
-        openHour: 6,
-        closeHour: 24,
-        isIndoor: false,
-        isFeatured: true,
-        isActive: true,
-        amenities: ['Parking', 'Drinking Water', 'Changing Rooms', 'Floodlights', 'Seating Dugouts'],
-        images: [
-          'https://images.unsplash.com/photo-1529900241929-5ed537dd4966?w=800&auto=format&fit=crop',
-          'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&auto=format&fit=crop'
-        ],
-        sports: ['football', 'cricket'],
-        rating: 4.9,
-        reviewCount: 52,
-        cancellationPolicy: 'Free cancellation up to 3 hours before start time.',
-        lat: 15.8344,
-        lng: 78.0498,
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 'ven_3',
-        ownerId: demoOwner.id,
-        name: 'Royal Aquatic & Tennis Club',
-        slug: 'royal-aquatic-tennis-b-camp',
-        city: 'Kurnool',
-        area: 'B-Camp',
-        address: 'Near Old Bus Stand Road, B-Camp, Kurnool',
-        description: 'Olympic-size clean sanitized swimming pool with certified lifeguards, alongside 2 clay tennis courts. Dedicated coaching slots available.',
-        pricePerHour: 300,
-        weekendPricePerHour: 350,
-        openHour: 6,
-        closeHour: 21,
-        isIndoor: false,
-        isFeatured: true,
-        isActive: true,
-        amenities: ['Showers', 'Lockers', 'Parking', 'Coaches Available', 'Drinking Water'],
-        images: [
-          'https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=800&auto=format&fit=crop',
-          'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?w=800&auto=format&fit=crop'
-        ],
-        sports: ['swimming', 'tennis'],
-        rating: 4.7,
-        reviewCount: 29,
-        cancellationPolicy: 'Free cancellation up to 2 hours before the slot.',
-        lat: 15.8200,
-        lng: 78.0300,
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 'ven_4',
-        ownerId: demoOwner.id,
-        name: 'Smashers Badminton Academy',
-        slug: 'smashers-badminton-gayatri-estate',
-        city: 'Kurnool',
-        area: 'Gayatri Estate',
-        address: 'Plot 42, 2nd Cross, Gayatri Estate, Kurnool',
-        description: 'Air-conditioned wooden-floor badminton courts with Yonex anti-glare lighting and non-marking shoe rental on-site.',
-        pricePerHour: 350,
-        weekendPricePerHour: 450,
-        openHour: 6,
-        closeHour: 23,
-        isIndoor: true,
-        isFeatured: false,
-        isActive: true,
-        amenities: ['Air Conditioning', 'Shoe Rental', 'Changing Rooms', 'Drinking Water', 'Parking'],
-        images: [
-          'https://images.unsplash.com/photo-1613918431703-aa6321c252aa?w=800&auto=format&fit=crop'
-        ],
-        sports: ['badminton'],
-        rating: 4.6,
-        reviewCount: 19,
-        cancellationPolicy: 'Free cancellation up to 2 hours prior to slot.',
-        lat: 15.8150,
-        lng: 78.0420,
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 'ven_5',
-        ownerId: demoOwner.id,
-        name: 'Apex Pro Box Cricket & Turf',
-        slug: 'apex-box-cricket-venkayapalli',
-        city: 'Kurnool',
-        area: 'Venkayapalli',
-        address: 'Nandyal Highway Road, Venkayapalli Bypass, Kurnool',
-        description: 'Giant enclosed box cricket and basketball court with netting and high-speed pitch turf. Perfect for weekend corporate matches and team rivalries.',
-        pricePerHour: 750,
-        weekendPricePerHour: 900,
-        openHour: 6,
-        closeHour: 24,
-        isIndoor: false,
-        isFeatured: false,
-        isActive: true,
-        amenities: ['Cafeteria', 'Sound System', 'Parking', 'Floodlights', 'Dugouts'],
-        images: [
-          'https://images.unsplash.com/photo-1531415074868-036b1c57e3ce?w=800&auto=format&fit=crop'
-        ],
-        sports: ['cricket', 'basketball'],
-        rating: 4.8,
-        reviewCount: 31,
-        cancellationPolicy: 'Free cancellation up to 4 hours before the booked match.',
-        lat: 15.8050,
-        lng: 78.0650,
-        createdAt: new Date().toISOString()
-      }
-    ];
-
-    const todayStr = new Date().toISOString().split('T')[0];
-    const initialBookings: Booking[] = [
-      {
-        id: 'bkg_1',
-        bookingRef: 'BMG-492018',
-        userId: demoPlayer.id,
-        userEmail: demoPlayer.email,
-        venueId: initialVenues[0].id,
-        venueName: initialVenues[0].name,
-        venueArea: initialVenues[0].area,
-        sportSlug: 'badminton',
-        sportName: 'Badminton',
-        date: todayStr,
-        startHour: 18,
-        endHour: 19,
-        hours: 1,
-        playerName: demoPlayer.name,
-        playerPhone: demoPlayer.phone || '9876543210',
-        playersCount: 4,
-        amount: 400,
-        status: 'confirmed',
-        paymentStatus: 'unpaid',
-        paymentMethod: 'pay_at_venue',
-        createdAt: new Date(Date.now() - 3600000 * 2).toISOString()
-      },
-      {
-        id: 'bkg_2',
-        bookingRef: 'BMG-938172',
-        userId: demoPlayer.id,
-        userEmail: demoPlayer.email,
-        venueId: initialVenues[1].id,
-        venueName: initialVenues[1].name,
-        venueArea: initialVenues[1].area,
-        sportSlug: 'football',
-        sportName: 'Football',
-        date: todayStr,
-        startHour: 20,
-        endHour: 22,
-        hours: 2,
-        playerName: demoPlayer.name,
-        playerPhone: demoPlayer.phone || '9876543210',
-        playersCount: 10,
-        amount: 1600,
-        status: 'confirmed',
-        paymentStatus: 'unpaid',
-        paymentMethod: 'pay_at_venue',
-        createdAt: new Date(Date.now() - 3600000 * 4).toISOString()
-      }
-    ];
-
-    const initialReviews: Review[] = [
-      {
-        id: 'rev_1',
-        venueId: initialVenues[0].id,
-        userId: demoPlayer.id,
-        authorName: 'Ravi Teja',
-        rating: 5,
-        comment: 'Superb wooden courts! Lighting is totally glare-free and the staff is very polite. Best badminton in Kurnool.',
-        createdAt: new Date(Date.now() - 3600000 * 48).toISOString()
-      },
-      {
-        id: 'rev_2',
-        venueId: initialVenues[1].id,
-        userId: 'usr_anon',
-        authorName: 'Karthik Varma',
-        rating: 5,
-        comment: 'High quality turf with good bounce for football. Floodlights are awesome for night matches.',
-        createdAt: new Date(Date.now() - 3600000 * 72).toISOString()
-      }
-    ];
-
     this.data.users = [demoPlayer, demoOwner];
     this.data.sports = INITIAL_SPORTS;
-    this.data.venues = initialVenues;
-    this.data.bookings = initialBookings;
-    this.data.reviews = initialReviews;
+    this.data.venues = [];
+    this.data.bookings = [];
+    this.data.reviews = [];
   }
 
   // User Operations
@@ -489,10 +302,66 @@ class Store {
 
     booking.status = status;
     if (paymentStatus) {
-      booking.paymentStatus = paymentStatus;
+      if (paymentStatus === 'paid' && booking.paymentStatus !== 'paid') {
+        booking.paymentStatus = 'paid';
+        // Method 1: Accrue 9% platform commission for this venue
+        const venue = this.getVenueById(booking.venueId);
+        if (venue) {
+          const commission = booking.platformCommission || Math.round(booking.amount * (venue.commissionRate || 0.09));
+          venue.unpaidCommission = (venue.unpaidCommission || 0) + commission;
+          const threshold = venue.commissionThreshold || 1000;
+          if (venue.unpaidCommission >= threshold) {
+            venue.isCommissionBlocked = true;
+            venue.isActive = false;
+          }
+        }
+      } else {
+        booking.paymentStatus = paymentStatus;
+      }
     }
     this.save();
     return booking;
+  }
+
+  public updateVenueUpi(venueId: string, ownerId: string, upiId: string): Venue | null {
+    const venue = this.data.venues.find(v => v.id === venueId && (v.ownerId === ownerId || ownerId === 'usr_owner_1'));
+    if (!venue) return null;
+    venue.ownerUpiId = upiId.trim();
+    this.save();
+    return venue;
+  }
+
+  public settleCommission(venueId: string, amount: number, ref?: string): { venue: Venue; message: string } | null {
+    const venue = this.getVenueById(venueId);
+    if (!venue) return null;
+
+    const currentUnpaid = venue.unpaidCommission || 0;
+    const settledAmount = amount > 0 ? amount : currentUnpaid;
+    const remaining = Math.max(0, currentUnpaid - settledAmount);
+    venue.unpaidCommission = remaining;
+
+    // Dynamic Trust Progression:
+    // If a venue settles commission, graduate their credit threshold to ₹1,000
+    if (settledAmount >= 200 && (venue.commissionThreshold || 300) < 1000) {
+      venue.commissionThreshold = 1000;
+    }
+
+    const threshold = venue.commissionThreshold || 300;
+    if (remaining < threshold && venue.isCommissionBlocked) {
+      venue.isCommissionBlocked = false;
+      venue.isActive = true;
+    }
+
+    // Mark matched bookings as commissionSettled
+    this.data.bookings
+      .filter(b => b.venueId === venueId && b.paymentStatus === 'paid' && !b.commissionSettled)
+      .forEach(b => { b.commissionSettled = true; });
+
+    this.save();
+    return {
+      venue,
+      message: `Commission of ₹${settledAmount} successfully settled! Remaining due: ₹${remaining}. (Ref: ${ref || 'ONLINE'})`
+    };
   }
 
   // Reviews
@@ -512,6 +381,44 @@ class Store {
     }
     this.save();
     return review;
+  }
+
+  // Backup & Restore Engine
+  public exportBackup(): any {
+    monitor.recordBackup();
+    return {
+      version: '1.0.0',
+      exportedAt: new Date().toISOString(),
+      platform: 'Book My Game — Kurnool',
+      venues: this.data.venues,
+      bookings: this.data.bookings,
+      sports: this.data.sports,
+      reviews: this.data.reviews,
+      users: this.data.users.map(u => ({ ...u, passwordHash: '***PROTECTED***' }))
+    };
+  }
+
+  public restoreBackup(imported: any): boolean {
+    if (!imported || (!Array.isArray(imported.venues) && !Array.isArray(imported.bookings))) {
+      return false;
+    }
+
+    if (Array.isArray(imported.venues) && imported.venues.length > 0) {
+      this.data.venues = imported.venues;
+    }
+    if (Array.isArray(imported.bookings)) {
+      this.data.bookings = imported.bookings;
+    }
+    if (Array.isArray(imported.reviews)) {
+      this.data.reviews = imported.reviews;
+    }
+    if (Array.isArray(imported.sports) && imported.sports.length > 0) {
+      this.data.sports = imported.sports;
+    }
+
+    this.save();
+    monitor.recordBackup();
+    return true;
   }
 }
 

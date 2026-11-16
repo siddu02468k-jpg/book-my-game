@@ -137,11 +137,36 @@ export const LandingView: React.FC<LandingViewProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {trendingVenues.slice(0, 3).map((venue) => (
-            <VenueCard key={venue.id} venue={venue} onSelect={onSelectVenue} />
-          ))}
-        </div>
+        {trendingVenues.length === 0 ? (
+          <div className="bg-[#111815] border border-dashed border-sport-500/30 rounded-3xl p-8 text-center space-y-4 shadow-xl">
+            <div className="w-14 h-14 rounded-2xl bg-sport-500/10 border border-sport-500/30 text-sport-400 flex items-center justify-center mx-auto shadow-glow-sm">
+              <Trophy className="w-7 h-7" />
+            </div>
+            <div>
+              <h4 className="text-base font-black text-white uppercase">Be the First Sports Venue Listed in Kurnool!</h4>
+              <p className="text-xs text-slate-300 mt-1 max-w-md mx-auto leading-relaxed">
+                All pre-populated dummy venues have been removed. Are you a genuine turf or sports club owner in Kurnool? Register your ground with photos, verification & your receiving UPI ID to start accepting online player bookings directly!
+              </p>
+            </div>
+            <div>
+              <button
+                onClick={() => {
+                  triggerHaptic();
+                  onOpenOwner();
+                }}
+                className="px-6 py-3 rounded-xl bg-sport-500 hover:bg-sport-400 text-black font-extrabold text-xs shadow-glow transition active:scale-95"
+              >
+                + Register & Verify Your Turf Now
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {trendingVenues.slice(0, 3).map((venue) => (
+              <VenueCard key={venue.id} venue={venue} onSelect={onSelectVenue} />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* How it Works */}

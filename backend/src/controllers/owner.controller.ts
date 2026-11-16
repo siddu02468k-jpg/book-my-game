@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { store } from '../db/store';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { Venue } from '../types';
+import { monitor } from '../utils/monitoring';
 
 export const getOwnerVenues = (req: AuthenticatedRequest, res: Response): void => {
   const ownerId = req.userId || 'usr_owner_1';
@@ -23,11 +24,72 @@ export const addOwnerVenue = (req: AuthenticatedRequest, res: Response): void =>
     isIndoor = false,
     amenities = [],
     sports = ['cricket'],
-    images = []
+    images = [],
+    // Real Owner Identity & Verification Rules
+    ownerFullName,
+    ownerPhone,
+    ownerAltPhone,
+    governmentIdType = 'Electricity Bill of Turf Facility',
+    governmentIdNumber,
+    ownershipDocProof,
+    googleMapsUrl,
+    pitchType = 'Artificial AstroTurf',
+    // Payment Setup
+    ownerUpiId,
+    bankAccountNumber,
+    bankIfsc
   } = req.body;
 
-  if (!name || !area || !pricePerHour) {
-    res.status(400).json({ success: false, error: 'Name, area, and pricePerHour are required' });
+  // 1. Validate Turf Name & Location
+  if (!name || !name.trim()) {
+    res.status(400).json({ success: false, error: 'Turf / Facility Name is required' });
+    return;
+  }
+  if (!area || !area.trim()) {
+    res.status(400).json({ success: false, error: 'Area in Kurnool is required' });
+    return;
+  }
+
+  // 2. Validate Pricing
+  const price = Number(pricePerHour);
+  if (!price || price <= 0) {
+    res.status(400).json({ success: false, error: 'Valid hourly price per slot is required' });
+    return;
+  }
+
+  // 3. Real Owner Verification Rules
+  if (!ownerFullName || !ownerFullName.trim()) {
+    res.status(400).json({ success: false, error: 'Real Owner Legal Full Name is required for venue verification' });
+    return;
+  }
+  if (!ownerPhone || !ownerPhone.trim()) {
+    res.status(400).json({ success: false, error: 'Owner primary mobile number is required for player verification' });
+    return;
+  }
+  if (!governmentIdNumber || !governmentIdNumber.trim()) {
+    res.status(400).json({ 
+      success: false, 
+      error: `Ownership proof document number (${governmentIdType}) is required to verify real facility ownership.` 
+    });
+    return;
+  }
+
+  // 4. Mandatory Turf Photos Rule
+  if (!images || !Array.isArray(images) || images.length === 0) {
+    res.status(400).json({ 
+      success: false, 
+      error: 'At least one real photo of your turf ground or court is required for registration.' 
+    });
+    return;
+  }
+
+  // 5. Direct Receiving UPI ID Rule
+  const cleanUpi = (ownerUpiId || '').trim();
+  if (!cleanUpi || !cleanUpi.includes('@')) {
+    res.status(400).json({ 
+      success: false, 
+      error: 'Valid receiving UPI ID (e.g. yourname@okhdfcbank or 9876543210@ybl) is required so players can pay directly to your account.' 
+    });
     return;
   }
 
@@ -36,30 +98,55 @@ export const addOwnerVenue = (req: AuthenticatedRequest, res: Response): void =>
   const newVenue: Venue = {
     id: `ven_${Date.now()}`,
     ownerId,
-    name,
+    name: name.trim(),
     slug,
     city: 'Kurnool',
-    area,
-    address: address || `${area}, Kurnool`,
-    description: description || `Professional sports facility in ${area}, Kurnool.`,
-    pricePerHour: Number(pricePerHour),
-    weekendPricePerHour: weekendPricePerHour ? Number(weekendPricePerHour) : Number(pricePerHour) + 100,
+    area: area.trim(),
+    address: address?.trim() || `${area}, Kurnool`,
+    description: description?.trim() || `Verified sports turf and hourly slot facility in ${area}, Kurnool.`,
+    pricePerHour: price,
+    weekendPricePerHour: weekendPricePerHour ? Number(weekendPricePerHour) : price + 100,
     openHour: Number(openHour),
     closeHour: Number(closeHour),
     isIndoor: Boolean(isIndoor),
-    isFeatured: false,
+    isFeatured: true,
     isActive: true,
-    amenities: Array.isArray(amenities) ? amenities : ['Parking', 'Drinking Water', 'Floodlights'],
-    images: images.length > 0 ? images : ['https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=800&auto=format&fit=crop'],
-    sports: Array.isArray(sports) ? sports : ['cricket'],
+    amenities: Array.isArray(amenities) && amenities.length > 0 ? amenities : ['Parking', 'Drinking Water', 'Floodlights'],
+    images,
+    sports: Array.isArray(sports) && sports.length > 0 ? sports : ['cricket'],
     rating: 5.0,
     reviewCount: 1,
-    cancellationPolicy: 'Free cancellation up to 2 hours before the slot time.',
+    cancellationPolicy: 'Free cancellation up to 2 hours before the booked slot time.',
+    
+    // Real Owner Identity & Verification Fields
+    ownerFullName: ownerFullName.trim(),
+    ownerPhone: ownerPhone.trim(),
+    ownerAltPhone: ownerAltPhone?.trim() || '',
+    governmentIdType,
+    governmentIdNumber: governmentIdNumber.trim(),
+    ownershipDocProof: ownershipDocProof || '',
+    isVerified: true,
+    verificationStatus: 'verified',
+    googleMapsUrl: googleMapsUrl?.trim() || '',
+    pitchType: pitchType?.trim() || 'AstroTurf',
+
+    // Method 1 Direct Payment & Commission Auto-Lock
+    ownerUpiId: cleanUpi,
+    bankAccountNumber: bankAccountNumber?.trim() || '',
+    bankIfsc: bankIfsc?.trim() || '',
+    commissionRate: 0.09,
+    unpaidCommission: 0,
+    commissionThreshold: 300, // Safe starter tier: locks at ₹300 until trust is established
+    isCommissionBlocked: false,
     createdAt: new Date().toISOString()
   };
 
   const created = store.createVenue(newVenue);
-  res.status(201).json({ success: true, message: 'Venue created successfully', data: created });
+  res.status(201).json({ 
+    success: true, 
+    message: `Turf "${created.name}" registered and verified successfully! Your venue is now live for Kurnool players.`, 
+    data: created 
+  });
 };
 
 export const toggleVenueActive = (req: AuthenticatedRequest, res: Response): void => {
@@ -140,5 +227,83 @@ export const becomeOwner = (req: AuthenticatedRequest, res: Response): void => {
     success: true,
     message: 'Congratulations! Your account is now upgraded to Venue Owner.',
     data: updatedUser
+  });
+};
+
+export const updateVenueUpi = (req: AuthenticatedRequest, res: Response): void => {
+  const ownerId = req.userId || 'usr_owner_1';
+  const venueId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const { upiId } = req.body;
+
+  if (!upiId || !String(upiId).includes('@')) {
+    res.status(400).json({ success: false, error: 'Valid UPI ID (e.g. name@bank) is required' });
+    return;
+  }
+
+  const updated = store.updateVenueUpi(venueId, ownerId, String(upiId).trim());
+  if (!updated) {
+    res.status(404).json({ success: false, error: 'Venue not found or unauthorized' });
+    return;
+  }
+
+  res.json({
+    success: true,
+    message: `Turf payment UPI updated to ${updated.ownerUpiId}! Player payments will transfer directly to this address.`,
+    data: updated
+  });
+};
+
+export const settleCommission = (req: AuthenticatedRequest, res: Response): void => {
+  const venueId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const { amount, ref } = req.body;
+
+  const result = store.settleCommission(venueId, Number(amount) || 0, ref);
+  if (!result) {
+    res.status(404).json({ success: false, error: 'Venue not found' });
+    return;
+  }
+
+  res.json({
+    success: true,
+    message: result.message,
+    data: result.venue
+  });
+};
+
+export const exportBackup = (_req: AuthenticatedRequest, res: Response): void => {
+  const backup = store.exportBackup();
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Content-Disposition', `attachment; filename=bookmygame-backup-${new Date().toISOString().split('T')[0]}.json`);
+  res.json({
+    success: true,
+    data: backup
+  });
+};
+
+export const restoreBackup = (req: AuthenticatedRequest, res: Response): void => {
+  const { backupData } = req.body;
+  if (!backupData) {
+    res.status(400).json({ success: false, error: 'Backup data JSON payload is required' });
+    return;
+  }
+
+  const success = store.restoreBackup(backupData);
+  if (!success) {
+    res.status(400).json({ success: false, error: 'Invalid backup format or corrupt schema.' });
+    return;
+  }
+
+  res.json({
+    success: true,
+    message: 'Database backup restored successfully! All venues and reservations are synced.'
+  });
+};
+
+export const getSystemHealth = (_req: AuthenticatedRequest, res: Response): void => {
+  const dbCounts = store.getCounts();
+  const metrics = monitor.getMetrics(dbCounts);
+  res.json({
+    success: true,
+    data: metrics
   });
 };

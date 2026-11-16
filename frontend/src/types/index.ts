@@ -40,6 +40,27 @@ export interface Venue {
   cancellationPolicy: string;
   lat?: number;
   lng?: number;
+
+  // Real Owner Identity & Verification Details
+  ownerFullName?: string;
+  ownerPhone?: string;
+  ownerAltPhone?: string;
+  governmentIdType?: string;
+  governmentIdNumber?: string;
+  ownershipDocProof?: string;
+  isVerified?: boolean;
+  verificationStatus?: 'verified' | 'pending' | 'under_review';
+  googleMapsUrl?: string;
+  pitchType?: string;
+
+  // Method 1 Direct Payment & Commission Auto-Lock
+  ownerUpiId?: string;
+  bankAccountNumber?: string;
+  bankIfsc?: string;
+  commissionRate?: number;
+  unpaidCommission?: number;
+  commissionThreshold?: number;
+  isCommissionBlocked?: boolean;
   reviews?: Review[];
 }
 
@@ -68,12 +89,17 @@ export interface Booking {
   playerName: string;
   playerPhone: string;
   playersCount: number;
+  baseAmount?: number;
+  platformCommission?: number;
   amount: number;
+  turfEarnings?: number;
   status: 'confirmed' | 'completed' | 'cancelled';
   paymentStatus: 'unpaid' | 'paid';
   paymentMethod: 'pay_at_venue' | 'upi';
   notes?: string;
   createdAt: string;
+  venueOwnerUpiId?: string;
+  commissionSettled?: boolean;
 }
 
 export interface Review {

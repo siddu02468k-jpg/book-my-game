@@ -9,6 +9,7 @@ import bookingsRoutes from './routes/bookings.routes';
 import ownerRoutes from './routes/owner.routes';
 import paymentsRoutes from './routes/payments.routes';
 import { store } from './db/store';
+import { monitor } from './utils/monitoring';
 
 dotenv.config();
 
@@ -40,27 +41,41 @@ app.use(
   })
 );
 
-app.use(express.json());
+// Security Headers Middleware (OWASP Top 10 hardening)
+app.use((_req: Request, res: Response, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
+  next();
+});
 
-// Request logger
+app.use(express.json({ limit: '1mb' }));
+
+// Request logger & tracking
 app.use((req, _res, next) => {
+  monitor.recordRequest();
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] ${req.method} ${req.url} - Origin: ${req.headers.origin || 'Direct'}`);
   next();
 });
 
-// Health check endpoint
+// Health & System Monitoring check endpoint
 app.get('/api/health', (_req: Request, res: Response) => {
-  const venues = store.getVenues();
+  const dbCounts = store.getCounts();
+  const metrics = monitor.getMetrics(dbCounts);
   res.json({
-    status: 'online',
+    status: metrics.status,
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
     platform: 'Book My Game — Kurnool Sports API',
-    stats: {
-      venuesCount: venues.length,
-      sportsCount: store.getSports().length
-    }
+    uptime: metrics.uptimeFormatted,
+    uptimeSeconds: metrics.uptimeSeconds,
+    totalRequests: metrics.totalRequests,
+    errorCount: metrics.errorCount,
+    memory: metrics.memory,
+    lastBackup: metrics.lastBackup,
+    database: metrics.database
   });
 });
 
@@ -89,6 +104,20 @@ if (fs.existsSync(frontendDist)) {
     res.status(404).json({ success: false, error: 'Endpoint not found' });
   });
 }
+
+// Centralized Production Error Monitoring & Logging Middleware
+app.use((err: any, req: Request, res: Response, _next: any) => {
+  const timestamp = new Date().toISOString();
+  const status = err.status || 500;
+  console.error(`🚨 [${timestamp}] Server Exception on ${req.method} ${req.url}:`, err.stack || err);
+  monitor.recordError(err, req.method, req.url, status);
+
+  res.status(status).json({
+    success: false,
+    error: err.message || 'Internal Server Error. Please retry or contact support.',
+    timestamp
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`====================================================`);

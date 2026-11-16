@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, MapPin, ChevronRight, Zap } from 'lucide-react';
+import { Star, MapPin, ChevronRight, Zap, ShieldCheck } from 'lucide-react';
 import { Venue } from '../types';
 import { triggerHaptic } from '../utils/device';
 
@@ -41,8 +41,14 @@ export const VenueCard: React.FC<VenueCardProps> = ({ venue, onSelect }) => {
             <span className="text-[10px] text-slate-400 font-normal">({venue.reviewCount})</span>
           </div>
 
-          {/* Featured or Indoor Badge */}
+          {/* Verified Owner, Featured or Indoor Badge */}
           <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
+            {venue.isVerified && (
+              <span className="bg-emerald-500 text-black text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full shadow-glow-sm flex items-center space-x-1">
+                <ShieldCheck className="w-3 h-3" />
+                <span>Verified Turf</span>
+              </span>
+            )}
             {venue.isFeatured && (
               <span className="bg-sport-500 text-black text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full shadow-glow-sm">
                 Featured
@@ -79,6 +85,12 @@ export const VenueCard: React.FC<VenueCardProps> = ({ venue, onSelect }) => {
           <h3 className="font-bold text-base text-white group-hover:text-sport-400 transition-colors">
             {venue.name}
           </h3>
+
+          {venue.pitchType && (
+            <span className="inline-block mt-1 text-[10px] font-mono text-sport-400 bg-sport-500/10 border border-sport-500/20 px-2 py-0.5 rounded">
+              🏟️ {venue.pitchType}
+            </span>
+          )}
 
           <p className="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">
             {venue.description}

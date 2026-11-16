@@ -43,6 +43,27 @@ export interface Venue {
   lat?: number;
   lng?: number;
   createdAt: string;
+
+  // Real Owner Identity & Verification Details
+  ownerFullName?: string; // Real full legal name of the turf owner
+  ownerPhone?: string; // Primary verified phone number
+  ownerAltPhone?: string; // Alternate / backup contact
+  governmentIdType?: string; // e.g. "Electricity Bill", "GST Certificate", "Trade License", "Aadhaar Card", "PAN Card"
+  governmentIdNumber?: string; // Document / ID number
+  ownershipDocProof?: string; // Document proof image (base64 or URL)
+  isVerified?: boolean; // Real owner verification status
+  verificationStatus?: 'verified' | 'pending' | 'under_review';
+  googleMapsUrl?: string; // Google Maps navigation link
+  pitchType?: string; // e.g. "AstroTurf", "Synthetic Rubber", "Clay Court", "Wooden Floor"
+
+  // Method 1 Direct Payment & Commission Auto-Lock
+  ownerUpiId?: string;
+  bankAccountNumber?: string;
+  bankIfsc?: string;
+  commissionRate?: number; // default 0.09 (9%)
+  unpaidCommission?: number; // accumulated unpaid 9% commission
+  commissionThreshold?: number; // credit limit before auto-lock (e.g. 1000)
+  isCommissionBlocked?: boolean; // true if venue auto-paused due to unpaid commission
 }
 
 export interface SlotAvailability {
@@ -70,12 +91,17 @@ export interface Booking {
   playerName: string;
   playerPhone: string;
   playersCount: number;
-  amount: number;
+  baseAmount?: number; // Turf owner's base rate (e.g. ₹1,000)
+  platformCommission?: number; // 9% platform fee added on top (e.g. ₹90)
+  amount: number; // Total customer pays (e.g. ₹1,090)
+  turfEarnings?: number; // Turf owner receives full base rate (e.g. ₹1,000)
   status: 'confirmed' | 'completed' | 'cancelled';
   paymentStatus: 'unpaid' | 'paid';
   paymentMethod: 'pay_at_venue' | 'upi';
   notes?: string;
   createdAt: string;
+  venueOwnerUpiId?: string; // Turf owner UPI ID used
+  commissionSettled?: boolean; // whether turf owner has paid this commission to platform
 }
 
 export interface Review {

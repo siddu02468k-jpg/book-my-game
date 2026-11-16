@@ -31,6 +31,14 @@ export const createBooking = (req: AuthenticatedRequest, res: Response): void =>
       return;
     }
 
+    if (!venue.isActive || venue.isCommissionBlocked) {
+      res.status(400).json({
+        success: false,
+        error: 'This venue is currently paused and cannot accept new bookings at this time. Please choose another venue.'
+      });
+      return;
+    }
+
     const endHour = startHour + hours;
 
     // Check operating hours boundary
@@ -71,7 +79,14 @@ export const createBooking = (req: AuthenticatedRequest, res: Response): void =>
     const dayOfWeek = checkDate.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     const hourlyRate = (isWeekend && venue.weekendPricePerHour) ? venue.weekendPricePerHour : venue.pricePerHour;
-    const totalAmount = hourlyRate * hours;
+    const baseAmount = hourlyRate * hours; // Turf owner's full price (e.g. ₹1,000)
+
+    // Method 1: Add 9% Platform Fee on top (Customer pays ₹1,090; Turf Owner keeps ₹1,000, Platform gets ₹90)
+    const commissionRate = venue.commissionRate || 0.09;
+    const platformCommission = Math.round(baseAmount * commissionRate); // e.g. ₹90
+    const totalAmount = baseAmount + platformCommission; // e.g. ₹1,090
+    const turfEarnings = baseAmount; // Turf owner receives 100% of their base fee (₹1,000)
+    const venueOwnerUpiId = venue.ownerUpiId || 'bookmygame@upi';
 
     // Generate reference ID e.g. BMG-829103
     const randomCode = Math.floor(100000 + Math.random() * 900000);
@@ -94,10 +109,15 @@ export const createBooking = (req: AuthenticatedRequest, res: Response): void =>
       playerName,
       playerPhone,
       playersCount: Number(playersCount),
+      baseAmount,
+      platformCommission,
       amount: totalAmount,
+      turfEarnings,
       status: 'confirmed',
       paymentStatus: 'unpaid',
-      paymentMethod: 'pay_at_venue',
+      paymentMethod: (req.body.paymentMethod as any) || 'pay_at_venue',
+      venueOwnerUpiId,
+      commissionSettled: false,
       notes,
       createdAt: new Date().toISOString()
     };
@@ -106,7 +126,7 @@ export const createBooking = (req: AuthenticatedRequest, res: Response): void =>
 
     res.status(201).json({
       success: true,
-      message: 'Booking confirmed successfully! Pay ₹' + totalAmount + ' at the venue.',
+      message: 'Booking confirmed successfully!',
       data: saved
     });
   } catch (err: any) {

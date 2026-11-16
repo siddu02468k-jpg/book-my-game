@@ -107,7 +107,12 @@
       "cancellationPolicy": "Free cancellation up to 2 hours before the booked slot time.",
       "lat": 15.8281,
       "lng": 78.0373,
-      "createdAt": "2026-11-15T05:30:46.520Z"
+      "createdAt": "2026-11-15T05:30:46.520Z",
+      "ownerUpiId": "spartanarena@okaxis",
+      "commissionRate": 0.09,
+      "unpaidCommission": 0,
+      "commissionThreshold": 1000,
+      "isCommissionBlocked": false
     },
     {
       "id": "ven_2",
@@ -145,7 +150,12 @@
       "cancellationPolicy": "Free cancellation up to 3 hours before start time.",
       "lat": 15.8344,
       "lng": 78.0498,
-      "createdAt": "2026-11-15T05:30:46.520Z"
+      "createdAt": "2026-11-15T05:30:46.520Z",
+      "ownerUpiId": "kurnoolturf@ybl",
+      "commissionRate": 0.09,
+      "unpaidCommission": 0,
+      "commissionThreshold": 1000,
+      "isCommissionBlocked": false
     },
     {
       "id": "ven_3",
@@ -183,7 +193,12 @@
       "cancellationPolicy": "Free cancellation up to 2 hours before the slot.",
       "lat": 15.82,
       "lng": 78.03,
-      "createdAt": "2026-11-15T05:30:46.520Z"
+      "createdAt": "2026-11-15T05:30:46.520Z",
+      "ownerUpiId": "royalaquatic@icici",
+      "commissionRate": 0.09,
+      "unpaidCommission": 0,
+      "commissionThreshold": 1000,
+      "isCommissionBlocked": false
     },
     {
       "id": "ven_4",
@@ -219,7 +234,12 @@
       "cancellationPolicy": "Free cancellation up to 2 hours prior to slot.",
       "lat": 15.815,
       "lng": 78.042,
-      "createdAt": "2026-11-15T05:30:46.520Z"
+      "createdAt": "2026-11-15T05:30:46.520Z",
+      "ownerUpiId": "smashersbadminton@oksbi",
+      "commissionRate": 0.09,
+      "unpaidCommission": 0,
+      "commissionThreshold": 1000,
+      "isCommissionBlocked": false
     },
     {
       "id": "ven_5",
@@ -256,7 +276,12 @@
       "cancellationPolicy": "Free cancellation up to 4 hours before the booked match.",
       "lat": 15.805,
       "lng": 78.065,
-      "createdAt": "2026-11-15T05:30:46.520Z"
+      "createdAt": "2026-11-15T05:30:46.520Z",
+      "ownerUpiId": "apexprocricket@paytm",
+      "commissionRate": 0.09,
+      "unpaidCommission": 0,
+      "commissionThreshold": 1000,
+      "isCommissionBlocked": false
     }
   ],
   "bookings": [
@@ -305,6 +330,34 @@
       "paymentStatus": "unpaid",
       "paymentMethod": "pay_at_venue",
       "createdAt": "2026-11-15T01:30:46.520Z"
+    },
+    {
+      "id": "bkg_1794740056870",
+      "bookingRef": "BMG-773749",
+      "userId": "guest_user",
+      "userEmail": "guest@bookmygame.in",
+      "venueId": "ven_1",
+      "venueName": "Spartan Sports Arena",
+      "venueArea": "Budhawarpet",
+      "sportSlug": "badminton",
+      "sportName": "Badminton",
+      "date": "2026-12-25",
+      "startHour": 18,
+      "endHour": 19,
+      "hours": 1,
+      "playerName": "Simulated Racer 1",
+      "playerPhone": "9988776650",
+      "playersCount": 2,
+      "baseAmount": 400,
+      "platformCommission": 36,
+      "amount": 436,
+      "turfEarnings": 400,
+      "status": "confirmed",
+      "paymentStatus": "unpaid",
+      "paymentMethod": "pay_at_venue",
+      "venueOwnerUpiId": "spartanarena@okaxis",
+      "commissionSettled": false,
+      "createdAt": "2026-11-15T10:54:16.870Z"
     }
   ],
   "reviews": [

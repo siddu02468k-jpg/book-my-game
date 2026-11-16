@@ -6,7 +6,12 @@ import {
   getOwnerBookings,
   updateBookingStatus,
   verifyPass,
-  becomeOwner
+  becomeOwner,
+  updateVenueUpi,
+  settleCommission,
+  exportBackup,
+  restoreBackup,
+  getSystemHealth
 } from '../controllers/owner.controller';
 import { authenticateToken } from '../middleware/auth';
 
@@ -23,9 +28,14 @@ router.use((req, res, next) => {
 router.get('/venues', getOwnerVenues);
 router.post('/venues', addOwnerVenue);
 router.put('/venues/:id/toggle', toggleVenueActive);
+router.put('/venues/:id/upi', updateVenueUpi);
+router.post('/venues/:id/settle-commission', settleCommission);
 router.get('/bookings', getOwnerBookings);
 router.put('/bookings/:id/status', updateBookingStatus);
 router.post('/verify-pass', verifyPass);
 router.post('/become', becomeOwner);
+router.get('/backup/export', exportBackup);
+router.post('/backup/restore', restoreBackup);
+router.get('/system-health', getSystemHealth);
 
 export default router;

@@ -4,6 +4,15 @@ import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
+// Public config to share Razorpay Key ID with client
+router.get('/config', (_req: Request, res: Response): void => {
+  res.json({
+    success: true,
+    razorpayKeyId: process.env.RAZORPAY_KEY_ID || '',
+    defaultUpiId: process.env.PLATFORM_UPI_ID || process.env.DEFAULT_UPI_ID || 'bookmygame@upi'
+  });
+});
+
 // Create UPI / Online Payment Intent (Mockable for dev, ready for Razorpay Key ID/Secret)
 router.post('/create-order', (req: Request, res: Response): void => {
   const { bookingId, amount, paymentMethod } = req.body;
@@ -42,16 +51,16 @@ router.post('/verify', (req: Request, res: Response): void => {
     return;
   }
 
-  booking.paymentStatus = 'paid';
-  booking.paymentMethod = paymentMethod || 'upi';
-  if (booking.status === 'confirmed') {
-    booking.notes = `Paid online via ${paymentMethod || 'UPI'}. Txn ID: ${transactionId || 'TXN_' + Date.now()}`;
+  const updated = store.updateBookingStatus(booking.id, 'confirmed', 'paid');
+  if (updated) {
+    updated.paymentMethod = paymentMethod || 'upi';
+    updated.notes = `Paid directly to venue UPI (${updated.venueOwnerUpiId || 'venue UPI'}). Txn ID: ${transactionId || 'TXN_' + Date.now()}`;
   }
 
   res.json({
     success: true,
-    message: 'Payment verified successfully! Slot is fully paid.',
-    data: booking
+    message: 'Payment verified successfully! Slot is fully paid directly to venue owner.',
+    data: updated || booking
   });
 });
 

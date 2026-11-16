@@ -222,6 +222,21 @@ class ApiService {
     return res.data;
   }
 
+  public async updateVenueUpi(venueId: string, upiId: string): Promise<Venue> {
+    const res = await this.request<{ success: boolean; data: Venue }>(`/api/owner/venues/${venueId}/upi`, {
+      method: 'PUT',
+      body: JSON.stringify({ upiId }),
+    });
+    return res.data;
+  }
+
+  public async settleCommission(venueId: string, amount: number, ref?: string): Promise<{ success: boolean; message: string; data: Venue }> {
+    return await this.request(`/api/owner/venues/${venueId}/settle-commission`, {
+      method: 'POST',
+      body: JSON.stringify({ amount, ref }),
+    });
+  }
+
   public async getOwnerBookings(): Promise<Booking[]> {
     const res = await this.request<{ success: boolean; data: Booking[] }>('/api/owner/bookings');
     return res.data;
@@ -250,7 +265,33 @@ class ApiService {
     return res.data;
   }
 
+  public async exportBackup(): Promise<any> {
+    const res = await this.request<{ success: boolean; data: any }>('/api/owner/backup/export');
+    return res.data;
+  }
+
+  public async restoreBackup(backupData: any): Promise<{ success: boolean; message: string }> {
+    return await this.request('/api/owner/backup/restore', {
+      method: 'POST',
+      body: JSON.stringify({ backupData })
+    });
+  }
+
+  public async getSystemHealth(): Promise<any> {
+    const res = await this.request<{ success: boolean; data: any }>('/api/owner/system-health');
+    return res.data;
+  }
+
   // Payments
+  public async getPaymentConfig(): Promise<{ razorpayKeyId?: string; defaultUpiId?: string }> {
+    try {
+      const res = await this.request('/api/payments/config');
+      return res;
+    } catch {
+      return { razorpayKeyId: '', defaultUpiId: 'bookmygame@upi' };
+    }
+  }
+
   public async createPaymentOrder(bookingId: string, amount: number, paymentMethod: string): Promise<any> {
     return await this.request('/api/payments/create-order', {
       method: 'POST',
