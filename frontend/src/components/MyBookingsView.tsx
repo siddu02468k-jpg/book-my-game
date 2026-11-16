@@ -63,7 +63,7 @@ export const MyBookingsView: React.FC<MyBookingsViewProps> = ({
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-black text-white uppercase tracking-tight">Your Reservations</h2>
+          <h1 className="text-xl font-black text-white uppercase tracking-tight">Your Reservations &amp; Match Passes</h1>
           <p className="text-xs text-slate-400">View upcoming game slots & booking reference IDs</p>
         </div>
 

@@ -91,6 +91,16 @@ export const VenuesCatalogView: React.FC<VenuesCatalogViewProps> = ({
   return (
     <div className="space-y-5 pb-20">
       
+      {/* Page Title */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">
+            Sports Grounds &amp; Turfs in Kurnool
+          </h1>
+          <p className="text-xs text-slate-400">Discover and book verified grounds with instant slots</p>
+        </div>
+      </div>
+
       {/* Search & Filters Header */}
       <div className="bg-[#111815] border border-[#1e2923] p-4 rounded-2xl space-y-3">
         

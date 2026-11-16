@@ -1,5 +1,5 @@
 import React from 'react';
-import { Smartphone, Monitor, MapPin, Wifi, WifiOff, LogIn, User as UserIcon, LogOut } from 'lucide-react';
+import { Smartphone, Monitor, MapPin, Wifi, WifiOff, LogIn, User as UserIcon, LogOut, ShieldCheck } from 'lucide-react';
 import { User, BackendHealth } from '../types';
 import { triggerHaptic } from '../utils/device';
 
@@ -11,6 +11,7 @@ interface NavbarProps {
   onOpenAuth: () => void;
   onLogout: () => void;
   onOpenOwner: () => void;
+  onNavigateHome?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -21,29 +22,37 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAuth,
   onLogout,
   onOpenOwner,
+  onNavigateHome,
 }) => {
   return (
     <header className="sticky top-0 z-40 bg-[#0a0f0d]/90 backdrop-blur-md border-b border-[#1e2923] px-4 py-3 safe-padding-top transition-all">
       <div className="max-w-6xl mx-auto flex items-center justify-between">
         
-        {/* Brand & City Tag */}
-        <div className="flex items-center space-x-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sport-600 to-sport-400 flex items-center justify-center shadow-glow-sm font-black text-lg text-black">
+        {/* Clickable Brand & City Tag */}
+        <button
+          onClick={() => {
+            triggerHaptic();
+            if (onNavigateHome) onNavigateHome();
+          }}
+          className="flex items-center space-x-3 text-left group focus:outline-none cursor-pointer"
+          title="Return to Home Pitch"
+        >
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sport-600 to-sport-400 flex items-center justify-center shadow-glow-sm font-black text-lg text-black group-hover:scale-105 transition-transform">
             ⚡
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <h1 className="font-extrabold text-base md:text-lg tracking-tight text-white uppercase">
+              <span className="font-extrabold text-base md:text-lg tracking-tight text-white uppercase group-hover:text-sport-400 transition-colors">
                 Book My Game
-              </h1>
+              </span>
               <span className="flex items-center space-x-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-sport-500/10 text-sport-400 border border-sport-500/20">
                 <MapPin className="w-3 h-3 text-sport-400" />
                 <span>Kurnool</span>
               </span>
             </div>
-            <p className="text-[10px] text-slate-400 hidden sm:block">Turf & Court Hourly Slot Booking</p>
+            <p className="text-[10px] text-slate-400 hidden sm:block">Turf &amp; Court Hourly Slot Booking</p>
           </div>
-        </div>
+        </button>
 
         {/* Controls & User State */}
         <div className="flex items-center space-x-2 sm:space-x-4">
@@ -106,6 +115,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className="text-xs font-medium text-slate-200 max-w-[90px] sm:max-w-[120px] truncate">
                   {user.name}
                 </span>
+                {user.emailVerified && (
+                  <span title="Verified Account">
+                    <ShieldCheck className="w-3 h-3 text-sport-400 flex-shrink-0" />
+                  </span>
+                )}
                 {user.role === 'owner' && (
                   <span className="text-[9px] bg-sport-500/20 text-sport-400 px-1.5 py-0.5 rounded font-bold uppercase">
                     Owner

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User, BackendHealth } from '../types';
 import { api, getDefaultApiUrl } from '../services/api';
 import { getPlatformName, isNativePlatform, triggerHaptic } from '../utils/device';
-import { Server, Smartphone, Vibrate, CheckCircle2, RefreshCw, User as UserIcon } from 'lucide-react';
+import { Server, Smartphone, Vibrate, CheckCircle2, RefreshCw, User as UserIcon, ShieldCheck, Users } from 'lucide-react';
 
 interface ProfileViewProps {
   user: User | null;
@@ -40,6 +40,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   return (
     <div className="space-y-5 pb-20">
       
+      {/* Page Header */}
+      <div>
+        <h1 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">
+          Account &amp; Player Settings
+        </h1>
+        <p className="text-xs text-slate-400">Manage verified profile, security, and device connectivity</p>
+      </div>
+
       {/* Account Card */}
       <div className="bg-[#111815] border border-[#1e2923] rounded-2xl p-5">
         <h3 className="text-sm font-black text-white uppercase tracking-tight mb-3">Player Account</h3>
@@ -54,7 +62,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </div>
               )}
               <div>
-                <h4 className="font-bold text-sm text-white">{user.name}</h4>
+                <div className="flex items-center space-x-1.5">
+                  <h4 className="font-bold text-sm text-white">{user.name}</h4>
+                  {user.emailVerified && (
+                    <span className="flex items-center space-x-1 text-[9px] bg-sport-500/20 text-sport-400 border border-sport-500/30 px-1.5 py-0.2 rounded font-bold">
+                      <ShieldCheck className="w-2.5 h-2.5" />
+                      <span>{user.authProvider === 'google' ? 'Google Verified' : 'Verified'}</span>
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-slate-400">{user.email}</p>
                 <div className="flex items-center space-x-1.5 mt-0.5">
                   <span className="text-[10px] text-sport-400 font-bold uppercase">Role: {user.role}</span>
@@ -62,15 +78,28 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </div>
               </div>
             </div>
-            <button
-              onClick={() => {
-                triggerHaptic();
-                onLogout();
-              }}
-              className="px-3 py-1.5 rounded-xl bg-[#16201b] hover:bg-rose-950/60 hover:text-rose-400 text-xs font-bold text-slate-300 border border-[#1e2923] transition"
-            >
-              Sign Out
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={() => {
+                  triggerHaptic();
+                  onOpenAuth();
+                }}
+                className="px-3 py-1.5 rounded-xl bg-[#16201b] hover:bg-sport-950/60 hover:text-sport-400 text-xs font-bold text-slate-300 border border-[#1e2923] transition flex items-center space-x-1"
+                title="Switch Account"
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Switch</span>
+              </button>
+              <button
+                onClick={() => {
+                  triggerHaptic();
+                  onLogout();
+                }}
+                className="px-3 py-1.5 rounded-xl bg-[#16201b] hover:bg-rose-950/60 hover:text-rose-400 text-xs font-bold text-slate-300 border border-[#1e2923] transition"
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
         ) : (
           <div className="text-center py-4">

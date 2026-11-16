@@ -2,10 +2,13 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  passwordHash: string;
+  passwordHash?: string;
   phone?: string;
   avatarUrl?: string;
   role: 'player' | 'owner' | 'admin';
+  authProvider?: 'local' | 'google';
+  googleId?: string;
+  emailVerified?: boolean;
   createdAt: string;
 }
 

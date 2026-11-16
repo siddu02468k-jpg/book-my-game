@@ -1,11 +1,13 @@
 {
   "short_name": "BookMyGame",
   "name": "Book My Game — Kurnool Turfs & Courts",
+  "description": "Hyperlocal sports venue & hourly slot reservation web platform for Kurnool, Andhra Pradesh.",
   "icons": [
     {
-      "src": "/vite.svg",
+      "src": "/favicon.svg",
       "type": "image/svg+xml",
-      "sizes": "192x192 512x512"
+      "sizes": "64x64 192x192 512x512",
+      "purpose": "any maskable"
     }
   ],
   "start_url": "/",

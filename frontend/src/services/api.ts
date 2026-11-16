@@ -1,7 +1,8 @@
-import { User, Sport, Venue, SlotAvailability, Booking, BackendHealth } from '../types';
+import { User, Sport, Venue, SlotAvailability, Booking, BackendHealth, SavedAccount } from '../types';
 
 const TOKEN_KEY = 'bmg_auth_token';
 const USER_KEY = 'bmg_user_profile';
+const SAVED_ACCOUNTS_KEY = 'bmg_saved_accounts';
 const API_URL_KEY = 'bmg_custom_api_url';
 
 export const getDefaultApiUrl = (): string => {
@@ -62,6 +63,67 @@ class ApiService {
     }
   }
 
+  public getSavedAccounts(): SavedAccount[] {
+    const raw = localStorage.getItem(SAVED_ACCOUNTS_KEY);
+    if (!raw) return [];
+    try {
+      const list = JSON.parse(raw);
+      return Array.isArray(list) ? list : [];
+    } catch {
+      return [];
+    }
+  }
+
+  public saveToSavedAccounts(user: User): void {
+    if (!user || !user.email) return;
+    const accounts = this.getSavedAccounts().filter(a => a.email.toLowerCase() !== user.email.toLowerCase());
+    const newEntry: SavedAccount = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      avatarUrl: user.avatarUrl,
+      authProvider: user.authProvider || 'local',
+      emailVerified: user.emailVerified ?? true,
+      lastLogin: new Date().toISOString()
+    };
+    // Keep up to 6 recently logged in accounts
+    const updated = [newEntry, ...accounts].slice(0, 6);
+    localStorage.setItem(SAVED_ACCOUNTS_KEY, JSON.stringify(updated));
+  }
+
+  public removeSavedAccount(email: string): void {
+    const accounts = this.getSavedAccounts().filter(a => a.email.toLowerCase() !== email.toLowerCase());
+    localStorage.setItem(SAVED_ACCOUNTS_KEY, JSON.stringify(accounts));
+  }
+
+  public clearSavedAccounts(): void {
+    localStorage.removeItem(SAVED_ACCOUNTS_KEY);
+  }
+
+  public async verifySession(): Promise<User | null> {
+    const token = this.getToken();
+    if (!token) {
+      this.setStoredUser(null);
+      return null;
+    }
+
+    try {
+      const res = await this.request<{ success: boolean; data: User }>('/api/auth/me');
+      if (res && res.data) {
+        this.setStoredUser(res.data);
+        this.saveToSavedAccounts(res.data);
+        return res.data;
+      }
+      return null;
+    } catch (err) {
+      console.warn('Session verification failed, resetting expired token:', err);
+      this.logout();
+      return null;
+    }
+  }
+
   private async request<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const token = this.getToken();
     const headers: Record<string, string> = {
@@ -118,6 +180,7 @@ class ApiService {
 
     this.setToken(res.data.token);
     this.setStoredUser(res.data.user);
+    this.saveToSavedAccounts(res.data.user);
     return res.data.user;
   }
 
@@ -129,6 +192,26 @@ class ApiService {
 
     this.setToken(res.data.token);
     this.setStoredUser(res.data.user);
+    this.saveToSavedAccounts(res.data.user);
+    return res.data.user;
+  }
+
+  public async googleAuth(data: {
+    credential?: string;
+    email?: string;
+    name?: string;
+    picture?: string;
+    googleId?: string;
+    role?: 'player' | 'owner';
+  }): Promise<User> {
+    const res = await this.request<any>('/api/auth/google', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+
+    this.setToken(res.data.token);
+    this.setStoredUser(res.data.user);
+    this.saveToSavedAccounts(res.data.user);
     return res.data.user;
   }
 
@@ -262,6 +345,7 @@ class ApiService {
       method: 'POST',
     });
     this.setStoredUser(res.data);
+    this.saveToSavedAccounts(res.data);
     return res.data;
   }
 

@@ -39,10 +39,10 @@ export const LandingView: React.FC<LandingViewProps> = ({
             <span>Now Live across Kurnool</span>
           </div>
 
-          <h2 className="text-3xl sm:text-5xl font-black text-white uppercase tracking-tight leading-none">
+          <h1 className="text-3xl sm:text-5xl font-black text-white uppercase tracking-tight leading-none">
             Your Game. <br />
             <span className="text-sport-400 underline decoration-sport-500/40">Your Slot.</span>
-          </h2>
+          </h1>
 
           <p className="mt-3 text-sm text-slate-300 max-w-lg leading-relaxed">
             Book cricket nets, football turfs, badminton courts, and swimming pools in Kurnool in seconds. Zero advance payment — pay directly at the venue!

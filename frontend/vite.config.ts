@@ -5,10 +5,22 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    host: true // exposes to local network for testing on real mobile devices via Wi-Fi!
+    host: true
   },
   build: {
     outDir: 'dist',
-    emptyOutDir: true
+    emptyOutDir: true,
+    sourcemap: false, // Security & performance: Remove production source maps
+    minify: 'esbuild',
+    target: 'es2020',
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'icons': ['lucide-react']
+        }
+      }
+    }
   }
 });

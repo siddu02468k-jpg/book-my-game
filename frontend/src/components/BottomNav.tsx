@@ -2,7 +2,7 @@ import React from 'react';
 import { Home, Compass, CalendarCheck, ShieldAlert, UserCheck } from 'lucide-react';
 import { triggerHaptic } from '../utils/device';
 
-export type TabType = 'home' | 'venues' | 'bookings' | 'owner' | 'profile';
+export type TabType = 'home' | 'venues' | 'bookings' | 'owner' | 'profile' | 'notfound';
 
 interface BottomNavProps {
   currentTab: TabType;

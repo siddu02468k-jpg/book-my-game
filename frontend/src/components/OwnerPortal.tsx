@@ -441,9 +441,9 @@ export const OwnerPortal: React.FC<OwnerPortalProps> = ({
           <span className="text-[10px] font-bold tracking-wider uppercase px-2.5 py-0.5 rounded-full bg-sport-500/10 text-sport-400 border border-sport-500/20">
             Manager Console
           </span>
-          <h2 className="text-xl font-black text-white uppercase tracking-tight mt-1">
-            Turf Owner Dashboard
-          </h2>
+          <h1 className="text-xl font-black text-white uppercase tracking-tight mt-1">
+            Turf Owner Dashboard &amp; Verification Portal
+          </h1>
           <p className="text-xs text-slate-400">Manage courts, monitor booking schedules & track revenue</p>
         </div>
 

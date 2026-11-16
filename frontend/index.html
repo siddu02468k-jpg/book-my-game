@@ -2,7 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
     <meta 
       name="viewport" 
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" 
@@ -12,9 +13,87 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="theme-color" content="#0a0f0d" />
     <link rel="manifest" href="/manifest.json" />
-    <title>Book My Game — Kurnool Turf & Court Booking</title>
+
+    <!-- SEO Meta Tags -->
+    <title>Book My Game — Kurnool Turf &amp; Court Hourly Slot Reservations</title>
+    <meta 
+      name="description" 
+      content="Reserve cricket nets, football turfs, badminton courts, and swimming pools in Kurnool in seconds. Zero advance payments — pay directly at the ground with instant booking pass." 
+    />
+    <meta 
+      name="keywords" 
+      content="turf booking kurnool, cricket nets kurnool, football turf kurnool, badminton courts kurnool, sports ground reservation, book my game" 
+    />
+    <meta name="author" content="Book My Game Kurnool" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://bookmygame.kurnool.dev/" />
+
+    <!-- Open Graph (Social Sharing) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://bookmygame.kurnool.dev/" />
+    <meta property="og:site_name" content="Book My Game Kurnool" />
+    <meta property="og:title" content="Book My Game — Kurnool Turf &amp; Court Booking" />
+    <meta property="og:description" content="Instant hourly slot reservations for cricket, football, badminton, and sports venues across Kurnool. Pay directly at the ground." />
+    <meta property="og:image" content="https://bookmygame.kurnool.dev/og-image.svg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="en_IN" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Book My Game — Kurnool Sports Turf Reservations" />
+    <meta name="twitter:description" content="Reserve cricket nets, football turfs, and sports venues in Kurnool. Live slots, verified grounds, zero advance." />
+    <meta name="twitter:image" content="https://bookmygame.kurnool.dev/og-image.svg" />
+
+    <!-- LocalBusiness & SportsActivityLocation JSON-LD Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://bookmygame.kurnool.dev/#website",
+          "url": "https://bookmygame.kurnool.dev/",
+          "name": "Book My Game Kurnool",
+          "description": "Hyperlocal sports venue & hourly slot reservation web platform for Kurnool, Andhra Pradesh.",
+          "inLanguage": "en-IN"
+        },
+        {
+          "@type": "SportsActivityLocation",
+          "@id": "https://bookmygame.kurnool.dev/#location",
+          "name": "Book My Game — Kurnool Sports Venues Network",
+          "url": "https://bookmygame.kurnool.dev/",
+          "telephone": "+919876543210",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Kurnool",
+            "addressRegion": "Andhra Pradesh",
+            "postalCode": "518001",
+            "addressCountry": "IN"
+          },
+          "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": "15.8281",
+            "longitude": "78.0373"
+          },
+          "openingHoursSpecification": {
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": [
+              "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
+            ],
+            "opens": "06:00",
+            "closes": "23:00"
+          },
+          "priceRange": "₹300 - ₹1200 per hour"
+        }
+      ]
+    }
+    </script>
+
+    <!-- Google Identity Services for Google OAuth & 1-Click Verification -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
-  <body class="bg-background text-slate-100 antialiased overscroll-none">
+  <body class="bg-background text-slate-100 antialiased overscroll-none overflow-x-hidden">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

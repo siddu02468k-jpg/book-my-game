@@ -5,6 +5,21 @@ export interface User {
   phone?: string;
   role: 'player' | 'owner' | 'admin';
   avatarUrl?: string;
+  authProvider?: 'local' | 'google';
+  googleId?: string;
+  emailVerified?: boolean;
+}
+
+export interface SavedAccount {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: 'player' | 'owner' | 'admin';
+  avatarUrl?: string;
+  authProvider: 'local' | 'google';
+  emailVerified: boolean;
+  lastLogin: string;
 }
 
 export interface Sport {

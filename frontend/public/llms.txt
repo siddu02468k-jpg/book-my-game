@@ -1,0 +1,21 @@
+# Book My Game — Kurnool
+
+> Hyperlocal sports venue & hourly slot reservation web platform for Kurnool, Andhra Pradesh.
+
+## Platform Summary
+- **Target Area**: Kurnool city (Budhawarpet, Joharapuram, B-Camp, Nandyal Road, Venkataramana Colony, Alur Road).
+- **Sports Covered**: Cricket box nets, football turf, badminton indoor courts, swimming pools, basketball, tennis courts.
+- **Payment Method**: Direct on-venue UPI / cash payments + 9% transparent convenience fee auto-locked on booking.
+- **Verified Turf Registration**: Real owners provide turf photo proof, legal ownership verification, operating hours, and UPI receiver ID.
+- **Architecture**: Express REST API backend + Vite React TypeScript responsive web app.
+
+## Key Web Pages
+- `/` - Home pitch: sport categories, search bar, trending Kurnool venues
+- `/#venues` - Complete sports ground catalog with area and price filters
+- `/#bookings` - Player match passes with verification QR code
+- `/#owner` - Turf owner management console & legal facility onboarding
+
+## Security & Privacy
+- Zero mobile APK distribution — 100% web-first PWA.
+- Password hashing with bcrypt, JWT token authentication, rate limiting, and OWASP Top 10 security headers.
+- Real owner verification checks to eliminate fake listings.

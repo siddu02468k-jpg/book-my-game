@@ -114,6 +114,8 @@ class Store {
       passwordHash,
       phone: '+91 98765 43210',
       role: 'player',
+      authProvider: 'local',
+      emailVerified: true,
       createdAt: new Date().toISOString()
     };
 
@@ -124,6 +126,8 @@ class Store {
       passwordHash,
       phone: '+91 99887 76655',
       role: 'owner',
+      authProvider: 'local',
+      emailVerified: true,
       createdAt: new Date().toISOString()
     };
 
@@ -145,6 +149,17 @@ class Store {
 
   public createUser(user: User): User {
     this.data.users.push(user);
+    this.save();
+    return user;
+  }
+
+  public updateUser(user: User): User {
+    const idx = this.data.users.findIndex(u => u.id === user.id || u.email.toLowerCase() === user.email.toLowerCase());
+    if (idx >= 0) {
+      this.data.users[idx] = { ...this.data.users[idx], ...user };
+    } else {
+      this.data.users.push(user);
+    }
     this.save();
     return user;
   }
@@ -416,6 +431,13 @@ class Store {
     }
     if (Array.isArray(imported.sports) && imported.sports.length > 0) {
       this.data.sports = imported.sports;
+    }
+    if (Array.isArray(imported.users)) {
+      for (const impUser of imported.users) {
+        if (!this.data.users.some(u => u.id === impUser.id || u.email.toLowerCase() === impUser.email.toLowerCase())) {
+          this.data.users.push(impUser);
+        }
+      }
     }
 
     this.save();
