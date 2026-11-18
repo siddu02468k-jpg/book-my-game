@@ -6,9 +6,10 @@ import { PolicyType } from './PolicyModal';
 interface FooterProps {
   onNavigate: (tab: any) => void;
   onOpenPolicy: (policy: PolicyType) => void;
+  onSelectSport?: (sport: string) => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenPolicy }) => {
+export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenPolicy, onSelectSport }) => {
   const currentYear = new Date().getFullYear();
 
   const scrollToTop = () => {
@@ -70,7 +71,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenPolicy }) => {
                 <button
                   onClick={() => {
                     triggerHaptic('light');
-                    onNavigate('venues');
+                    if (onSelectSport) {
+                      onSelectSport('cricket');
+                    } else {
+                      onNavigate('venues');
+                    }
                     scrollToTop();
                   }}
                   className="hover:text-sport-400 transition"
@@ -82,7 +87,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenPolicy }) => {
                 <button
                   onClick={() => {
                     triggerHaptic('light');
-                    onNavigate('venues');
+                    if (onSelectSport) {
+                      onSelectSport('badminton');
+                    } else {
+                      onNavigate('venues');
+                    }
                     scrollToTop();
                   }}
                   className="hover:text-sport-400 transition"

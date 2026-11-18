@@ -20,6 +20,16 @@ const SAVED_AT_KEY = 'bmg_dr_saved_at';
 const VENUE_COUNT_KEY = 'bmg_dr_venues_count';
 const DUMMY_IDS = ['ven_1', 'ven_2', 'ven_3', 'ven_4', 'ven_5'];
 
+// Auto-purge any stale legacy snapshot on file load
+try {
+  const stale = localStorage.getItem(SNAPSHOT_KEY);
+  if (stale && (stale.includes('ven_1') || stale.includes('ven_2') || stale.includes('ven_5'))) {
+    localStorage.removeItem(SNAPSHOT_KEY);
+    localStorage.removeItem(SAVED_AT_KEY);
+    localStorage.removeItem(VENUE_COUNT_KEY);
+  }
+} catch (_) {}
+
 export interface DrSnapshot {
   savedAt: string;
   venuesCount: number;
@@ -77,21 +87,9 @@ export function loadLocalSnapshot(): DrSnapshot | null {
   }
 }
 
-/** Returns true if the server appears freshly wiped (0 venues) but we have a valid snapshot of REAL registered venues. */
-export function needsRecovery(serverVenueCount: number): boolean {
-  if (serverVenueCount > 0) return false;
-  if (sessionStorage.getItem('bmg_dr_dismissed') === 'true') return false;
-
-  const snap = loadLocalSnapshot();
-  if (!snap || !Array.isArray(snap.backupData?.venues)) return false;
-
-  const realVenues = snap.backupData.venues.filter((v: any) => !DUMMY_IDS.includes(v.id));
-  if (realVenues.length === 0) {
-    clearLocalSnapshot();
-    return false;
-  }
-
-  return true;
+/** Disaster recovery is only triggered intentionally by the owner in the console. */
+export function needsRecovery(_serverVenueCount: number): boolean {
+  return false;
 }
 
 /** Dismiss recovery and clear any old snapshot. */

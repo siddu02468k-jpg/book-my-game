@@ -203,8 +203,7 @@ export const verifyPass = (req: AuthenticatedRequest, res: Response): void => {
   }
 
   const cleanRef = String(bookingRef).trim().toUpperCase();
-  const allBookings = store.getUserBookings('usr_player_1').concat(store.getOwnerBookings('usr_owner_1'));
-  const found = allBookings.find(b => b.bookingRef.toUpperCase() === cleanRef || b.id === cleanRef);
+  const found = store.findBookingByRef(cleanRef);
 
   if (!found) {
     res.status(404).json({ success: false, error: `Invalid Pass! No booking found for reference ${cleanRef}` });

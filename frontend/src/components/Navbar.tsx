@@ -11,6 +11,7 @@ interface NavbarProps {
   onOpenAuth: () => void;
   onLogout: () => void;
   onOpenOwner: () => void;
+  onOpenProfile?: () => void;
   onNavigateHome?: () => void;
 }
 
@@ -22,6 +23,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAuth,
   onLogout,
   onOpenOwner,
+  onOpenProfile,
   onNavigateHome,
 }) => {
   return (
@@ -103,9 +105,20 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* User Profile / Auth */}
           {user ? (
             <div className="flex items-center space-x-2">
-              <div 
-                onClick={onOpenOwner}
-                className="cursor-pointer flex items-center space-x-2 bg-[#16201b] hover:bg-[#1e2923] px-2.5 py-1 rounded-lg border border-[#1e2923] transition"
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  if (user.role === 'owner') {
+                    onOpenOwner();
+                  } else if (onOpenProfile) {
+                    onOpenProfile();
+                  } else {
+                    window.location.hash = 'profile';
+                  }
+                }}
+                className="flex items-center space-x-2 bg-[#16201b] hover:bg-[#1e2923] px-2.5 py-1 rounded-lg border border-[#1e2923] transition active:scale-95 text-left"
+                title={user.role === 'owner' ? 'Open Turf Owner Portal' : 'Open Player Profile'}
               >
                 {user.avatarUrl ? (
                   <img src={user.avatarUrl} alt={user.name} className="w-6 h-6 rounded-full" />
@@ -125,7 +138,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     Owner
                   </span>
                 )}
-              </div>
+              </button>
               <button
                 onClick={() => {
                   triggerHaptic();

@@ -41,6 +41,7 @@ interface OwnerPortalProps {
   bookings: Booking[];
   onRefreshData: () => void;
   onOpenAuth: () => void;
+  onUserUpdate?: (user: User) => void;
 }
 
 export const OwnerPortal: React.FC<OwnerPortalProps> = ({
@@ -49,6 +50,7 @@ export const OwnerPortal: React.FC<OwnerPortalProps> = ({
   bookings,
   onRefreshData,
   onOpenAuth,
+  onUserUpdate,
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -189,7 +191,8 @@ export const OwnerPortal: React.FC<OwnerPortalProps> = ({
 
   const handleOpenSettle = (v: Venue) => {
     setSettleVenue(v);
-    setSettleAmount(v.unpaidCommission || 0);
+    const amount = (v.unpaidCommission && v.unpaidCommission > 0) ? v.unpaidCommission : 100;
+    setSettleAmount(amount);
     setSettleRef('');
     setSettleSuccessMsg(null);
   };
@@ -322,7 +325,10 @@ export const OwnerPortal: React.FC<OwnerPortalProps> = ({
     }
     try {
       triggerHaptic();
-      await api.becomeOwner();
+      const updatedUser = await api.becomeOwner();
+      if (updatedUser && onUserUpdate) {
+        onUserUpdate(updatedUser);
+      }
       onRefreshData();
     } catch (err: any) {
       setError(err.message || 'Failed to become owner');
@@ -331,11 +337,13 @@ export const OwnerPortal: React.FC<OwnerPortalProps> = ({
 
   const handleToggleActive = async (venueId: string) => {
     try {
+      setError(null);
       triggerHaptic();
       await api.toggleVenueActive(venueId);
       onRefreshData();
     } catch (err: any) {
-      console.error(err);
+      console.error('Failed to toggle venue active status', err);
+      setError(err.message || 'Failed to update venue status. If locked due to commission, please settle commission first.');
     }
   };
 
@@ -1448,6 +1456,14 @@ export const OwnerPortal: React.FC<OwnerPortalProps> = ({
                 </div>
               </div>
 
+              {/* Bottom Error Feedback Alert */}
+              {error && (
+                <div className="p-3.5 rounded-2xl bg-rose-950/80 border border-rose-800 text-rose-200 text-xs flex items-center space-x-2 shadow-lg animate-in fade-in">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400" />
+                  <span className="font-semibold">{error}</span>
+                </div>
+              )}
+
               {/* Form Action Buttons */}
               <div className="pt-2 flex justify-end space-x-3 border-t border-[#1e2923]">
                 <button
@@ -1495,6 +1511,12 @@ export const OwnerPortal: React.FC<OwnerPortalProps> = ({
               <p className="text-xs text-slate-300">
                 Scan with PhonePe, GPay, or Paytm to pay <strong>₹{settleAmount}</strong> (9% platform fee for {settleVenue.name}).
               </p>
+
+              {(settleVenue.unpaidCommission || 0) <= 0 && (
+                <p className="text-[11px] text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 rounded-xl p-2 text-center">
+                  ✓ All current commission is settled (₹0 balance). You can record an advance or close.
+                </p>
+              )}
 
               {/* Platform UPI QR Code */}
               <div className="bg-white p-3.5 rounded-2xl max-w-[200px] mx-auto shadow-glow">

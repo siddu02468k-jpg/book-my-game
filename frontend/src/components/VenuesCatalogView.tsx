@@ -251,10 +251,19 @@ export const VenuesCatalogView: React.FC<VenuesCatalogViewProps> = ({
                 ? 'Only verified turf owners who register their grounds with photos and receiving UPI appear here. Are you a venue owner? Register your turf in the Owner Portal!'
                 : 'No matching sports venues in Kurnool for your current filters. Try resetting your search.'}
             </p>
-            {venues.length > 0 && (
+            {venues.length === 0 ? (
+              <button
+                onClick={() => {
+                  window.location.hash = 'owner';
+                }}
+                className="mt-4 px-5 py-2.5 rounded-xl bg-sport-500 hover:bg-sport-400 text-black text-xs font-black shadow-glow transition active:scale-95 inline-flex items-center space-x-1.5"
+              >
+                <span>+ Register Your Turf Now</span>
+              </button>
+            ) : (
               <button
                 onClick={onResetFilters}
-                className="mt-4 px-4 py-2 rounded-xl bg-sport-500 text-black text-xs font-bold shadow-glow-sm"
+                className="mt-4 px-4 py-2 rounded-xl bg-sport-500 hover:bg-sport-400 text-black text-xs font-bold shadow-glow-sm transition active:scale-95"
               >
                 Show All Venues
               </button>

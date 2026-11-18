@@ -17,8 +17,7 @@ import { User, Venue, Sport, Booking, BackendHealth } from './types';
 import { api } from './services/api';
 import { initMobileStatusBar, triggerHaptic } from './utils/device';
 import { updateSeoMeta } from './utils/seo';
-import { saveLocalSnapshot, loadLocalSnapshot, needsRecovery, snapshotAge, snapshotAgeDays, dismissRecovery } from './utils/disasterRecovery';
-import { Smartphone, ShieldCheck, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Smartphone } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<TabType>('home');
@@ -47,13 +46,6 @@ export const App: React.FC = () => {
   // Feedback Toasts & Policy Modals
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [activePolicy, setActivePolicy] = useState<PolicyType>(null);
-
-  // Disaster Recovery
-  const [drBannerVisible, setDrBannerVisible] = useState<boolean>(false);
-  const [drSnapshot, setDrSnapshot] = useState<any>(null);
-  const [drRestoring, setDrRestoring] = useState<boolean>(false);
-  const [drRestoredMsg, setDrRestoredMsg] = useState<string | null>(null);
-  const [snapshotInfo, setSnapshotInfo] = useState<{ age: string; days: number; count: number } | null>(null);
 
   const addToast = (type: 'success' | 'error' | 'info', title: string, message?: string) => {
     const newToast: ToastMessage = {
@@ -241,52 +233,9 @@ export const App: React.FC = () => {
       ]);
       setOwnerVenues(vData);
       setOwnerBookings(bData);
-
-      // Disaster recovery check
-      try {
-        const backupData = await api.exportBackup();
-        saveLocalSnapshot(backupData);
-        if (needsRecovery(venues.length)) {
-          const snap = loadLocalSnapshot();
-          if (snap) {
-            setDrSnapshot(snap.backupData);
-            setSnapshotInfo({
-              age: snapshotAge(),
-              days: snapshotAgeDays(),
-              count: snap.venuesCount
-            });
-            setDrBannerVisible(true);
-          }
-        }
-      } catch (snapErr) {
-        console.warn('[DR] Snapshot failed (non-critical):', snapErr);
-      }
     } catch {
-      // Ignored
+      // Ignored for non-owner users
     }
-  };
-
-  const handleDrRestore = async () => {
-    if (!drSnapshot) return;
-    try {
-      setDrRestoring(true);
-      await api.restoreBackup(drSnapshot);
-      setDrRestoredMsg('✅ All your venues and bookings have been restored successfully!');
-      setDrBannerVisible(false);
-      addToast('success', 'Restored Successfully', 'Venues and reservations restored from browser cache.');
-      setTimeout(() => setDrRestoredMsg(null), 6000);
-      await fetchOwnerData();
-    } catch (err: any) {
-      addToast('error', 'Restore Failed', err.message || 'Could not restore backup.');
-    } finally {
-      setDrRestoring(false);
-    }
-  };
-
-  const handleDrSkip = () => {
-    dismissRecovery();
-    setDrBannerVisible(false);
-    setDrSnapshot(null);
   };
 
   // Filter actions
@@ -429,6 +378,7 @@ export const App: React.FC = () => {
             bookings={ownerBookings}
             onRefreshData={fetchOwnerData}
             onOpenAuth={() => setIsAuthOpen(true)}
+            onUserUpdate={(updatedUser) => setUser(updatedUser)}
           />
         );
 
@@ -455,77 +405,13 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-slate-100 flex flex-col font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-background text-slate-100 flex flex-col font-sans pb-24 md:pb-8">
 
       {/* Floating Action Feedback Toasts */}
       <ToastNotification toasts={toasts} onDismiss={removeToast} />
 
       {/* Legal & Policy Modals */}
       <PolicyModal policy={activePolicy} onClose={() => setActivePolicy(null)} />
-
-      {/* Disaster Recovery Banner */}
-      {drBannerVisible && drSnapshot && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
-          <div className="bg-[#0f1512] border border-rose-800 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="p-2.5 rounded-xl bg-rose-950/60 text-rose-400 flex-shrink-0">
-                <AlertTriangle className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-base font-black text-white uppercase tracking-tight">Server Data Wiped!</h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Render redeployment detected — the server database has been reset.
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-[#16201b] border border-sport-500/30 rounded-xl p-3 text-xs space-y-1">
-              <div className="flex justify-between">
-                <span className="text-slate-400">Recovery Source</span>
-                <span className="text-sport-400 font-bold">Your Browser Cache</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Snapshot saved</span>
-                <span className="text-white font-bold">{snapshotInfo?.age || '—'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Venues in snapshot</span>
-                <span className="text-white font-bold">{snapshotInfo?.count || 0} venue(s)</span>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-300 leading-relaxed">
-              A complete backup was automatically saved in your browser's local storage.
-              Click <strong className="text-sport-400">Restore Now</strong> to recover all your venues, bookings, and reviews instantly.
-            </p>
-
-            <div className="flex gap-3">
-              <button
-                onClick={handleDrRestore}
-                disabled={drRestoring}
-                className="flex-1 flex items-center justify-center space-x-2 py-3 rounded-xl bg-sport-500 hover:bg-sport-400 text-black font-extrabold text-sm shadow-glow transition disabled:opacity-50 active:scale-95"
-              >
-                <RefreshCw className={`w-4 h-4 ${drRestoring ? 'animate-spin' : ''}`} />
-                <span>{drRestoring ? 'Restoring...' : 'Restore Now (Auto)'}</span>
-              </button>
-              <button
-                onClick={handleDrSkip}
-                className="px-4 py-3 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs hover:bg-slate-700 transition"
-              >
-                Skip
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Success Banner After DR Restore */}
-      {drRestoredMsg && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[199] bg-[#111815] border border-sport-500/60 text-sport-400 text-sm font-bold px-5 py-3 rounded-2xl shadow-glow flex items-center space-x-2">
-          <ShieldCheck className="w-5 h-5" />
-          <span>{drRestoredMsg}</span>
-        </div>
-      )}
 
       {/* Simulated Mobile Mode Frame */}
       {isSimulatedMobile ? (
@@ -552,15 +438,16 @@ export const App: React.FC = () => {
               onOpenAuth={() => setIsAuthOpen(true)}
               onLogout={handleLogout}
               onOpenOwner={() => handleTabNavigate('owner')}
+              onOpenProfile={() => handleTabNavigate('profile')}
               onNavigateHome={() => handleTabNavigate('home')}
             />
 
-            <main className="flex-1 overflow-y-auto px-4 py-4 smooth-scroll">
+            <main className="flex-1 overflow-y-auto px-4 py-4 pb-20 smooth-scroll">
               {currentTab !== 'home' && (
                 <Breadcrumbs items={getBreadcrumbs()} onNavigate={handleTabNavigate} />
               )}
               {renderContent()}
-              <Footer onNavigate={handleTabNavigate} onOpenPolicy={setActivePolicy} />
+              <Footer onNavigate={handleTabNavigate} onOpenPolicy={setActivePolicy} onSelectSport={handleSelectSport} />
             </main>
 
             <BottomNav
@@ -580,6 +467,7 @@ export const App: React.FC = () => {
             onOpenAuth={() => setIsAuthOpen(true)}
             onLogout={handleLogout}
             onOpenOwner={() => handleTabNavigate('owner')}
+            onOpenProfile={() => handleTabNavigate('profile')}
             onNavigateHome={() => handleTabNavigate('home')}
           />
 
@@ -590,7 +478,7 @@ export const App: React.FC = () => {
             {renderContent()}
           </main>
 
-          <Footer onNavigate={handleTabNavigate} onOpenPolicy={setActivePolicy} />
+          <Footer onNavigate={handleTabNavigate} onOpenPolicy={setActivePolicy} onSelectSport={handleSelectSport} />
 
           <BottomNav
             currentTab={currentTab}

@@ -147,6 +147,13 @@ class Store {
     return this.data.users.find(u => u.id === id);
   }
 
+  public findBookingByRef(ref: string): Booking | undefined {
+    const clean = ref.trim().toUpperCase();
+    return this.data.bookings.find(
+      b => (b.bookingRef && b.bookingRef.toUpperCase() === clean) || (b.id && b.id.toUpperCase() === clean)
+    );
+  }
+
   public createUser(user: User): User {
     this.data.users.push(user);
     this.save();
