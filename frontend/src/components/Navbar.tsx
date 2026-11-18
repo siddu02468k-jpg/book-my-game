@@ -2,6 +2,7 @@ import React from 'react';
 import { Smartphone, Monitor, MapPin, Wifi, WifiOff, LogIn, User as UserIcon, LogOut, ShieldCheck, Crown } from 'lucide-react';
 import { User, BackendHealth } from '../types';
 import { triggerHaptic } from '../utils/device';
+import { BrandLogo } from './BrandLogo';
 
 interface NavbarProps {
   user: User | null;
@@ -36,24 +37,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             triggerHaptic();
             if (onNavigateHome) onNavigateHome();
           }}
-          className="flex items-center space-x-3 text-left group focus:outline-none cursor-pointer"
+          className="flex items-center space-x-2 text-left group focus:outline-none cursor-pointer"
           title="Return to Home Pitch"
         >
-          <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-sport-600 to-sport-400 flex items-center justify-center shadow-glow-sm font-black text-lg text-black group-hover:scale-105 transition-transform">
-            ⚡
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="font-black text-base md:text-lg tracking-tight text-white uppercase group-hover:text-sport-400 transition-colors">
-                Book My Game
-              </span>
-              <span className="flex items-center space-x-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-sport-500/10 text-sport-400 border border-sport-500/20">
-                <MapPin className="w-3 h-3 text-sport-400" />
-                <span>Kurnool</span>
-              </span>
-            </div>
-            <p className="text-[10px] text-slate-400 hidden sm:block">Direct UPI &amp; Hourly Turf Booking</p>
-          </div>
+          <BrandLogo size="md" showSubtitle={false} />
+          <span className="hidden sm:inline-flex items-center space-x-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-sport-500/10 text-sport-400 border border-sport-500/20 ml-1">
+            <MapPin className="w-3 h-3 text-sport-400" />
+            <span>Kurnool</span>
+          </span>
         </button>
 
         {/* Controls & User State */}

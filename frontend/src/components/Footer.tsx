@@ -2,6 +2,7 @@ import React from 'react';
 import { Phone, Mail, MapPin, ShieldCheck, Heart, ArrowUp } from 'lucide-react';
 import { triggerHaptic } from '../utils/device';
 import { PolicyType } from './PolicyModal';
+import { BrandLogo } from './BrandLogo';
 
 interface FooterProps {
   onNavigate: (tab: any) => void;
@@ -30,17 +31,9 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenPolicy, onSele
                 onNavigate('home');
                 scrollToTop();
               }}
-              className="flex items-center space-x-2.5 text-left group"
+              className="flex items-center text-left group"
             >
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sport-600 to-sport-400 flex items-center justify-center font-black text-black text-base shadow-glow-sm group-hover:scale-105 transition-transform">
-                ⚡
-              </div>
-              <div>
-                <span className="font-extrabold text-sm text-white uppercase tracking-tight group-hover:text-sport-400 transition-colors">
-                  Book My Game
-                </span>
-                <span className="block text-[10px] text-sport-400 font-semibold">Kurnool Sports Network</span>
-              </div>
+              <BrandLogo size="md" showSubtitle={false} />
             </button>
             <p className="text-[11px] text-slate-400 leading-relaxed">
               Hyperlocal sports venue & hourly slot reservation platform for athletes, teams, and ground operators in Kurnool, Andhra Pradesh.
