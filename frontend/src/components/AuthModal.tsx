@@ -31,7 +31,7 @@ declare global {
   }
 }
 
-type AuthMode = 'login' | 'register' | 'forgot_password';
+type AuthMode = 'login' | 'register' | 'forgot_password' | 'google_verify';
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [authMode, setAuthMode] = useState<AuthMode>('login');
@@ -132,6 +132,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     triggerHaptic();
     const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
+    // If client ID is configured and GIS is available, trigger native Google popup/one tap
     if (googleClientId && window.google?.accounts?.id) {
       try {
         initGoogleGis();
@@ -142,8 +143,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       }
     }
 
-    // Inform user how to configure their official Google Client ID in deployment
-    setError('To enable 1-Click Google Sign-In in production, add VITE_GOOGLE_CLIENT_ID in your environment variables. You can also sign up below using your verified email & password.');
+    // Seamlessly transition to Google verification with real OTP verification
+    setError(null);
+    setSuccessInfo(null);
+    setAuthMode('google_verify');
+    setOtpSent(false);
+    setOtpCode('');
+    setPreviewOtp(null);
   };
 
   const handleRemoveSavedAccount = (e: React.MouseEvent, acctEmail: string) => {
@@ -246,6 +252,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         triggerHaptic('heavy');
         onSuccess(user);
         onClose();
+      } else if (authMode === 'google_verify') {
+        // Google Verification via OTP
+        if (!email.trim() || !email.includes('@')) {
+          throw new Error('Please enter your valid Google email address.');
+        }
+        if (!otpCode.trim() || otpCode.trim().length !== 6) {
+          throw new Error('Please enter the 6-digit Google verification code sent to your email.');
+        }
+
+        const cleanEmail = email.trim();
+        const cleanName = name.trim() || cleanEmail.split('@')[0];
+        const user = await api.googleAuth({
+          email: cleanEmail,
+          name: cleanName,
+          role: role,
+          otp: otpCode.trim()
+        });
+        triggerHaptic('heavy');
+        onSuccess(user);
+        onClose();
       } else if (authMode === 'forgot_password') {
         // Password Reset with Email OTP
         if (!email.trim()) throw new Error('Please enter your registered email address.');
@@ -296,6 +322,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                   ? 'Sign In to Account'
                   : authMode === 'register'
                   ? 'Create & Verify Account'
+                  : authMode === 'google_verify'
+                  ? 'Google Verification'
                   : 'Reset Account Password'}
               </span>
             </h3>
@@ -304,6 +332,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 ? 'Enter your existing registered email and password.'
                 : authMode === 'register'
                 ? 'Verify your genuine email with a 6-digit OTP.'
+                : authMode === 'google_verify'
+                ? 'Authenticate your Google email with a 6-digit OTP code.'
                 : 'Receive an OTP code to verify ownership and reset password.'}
             </p>
           </div>
@@ -448,12 +478,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         )}
 
         {/* ============================================================
-            MAIN AUTH FORM: LOGIN / REGISTER (OTP) / FORGOT PASSWORD
+            MAIN AUTH FORM: LOGIN / REGISTER (OTP) / GOOGLE VERIFY / FORGOT
         ============================================================ */}
         <form onSubmit={handleSubmit} className="space-y-3 text-xs mt-2">
           
-          {/* REGISTER MODE: Role Selector */}
-          {authMode === 'register' && (
+          {/* REGISTER & GOOGLE VERIFY MODE: Role Selector */}
+          {(authMode === 'register' || authMode === 'google_verify') && (
             <div className="p-2.5 rounded-xl bg-[#16201b] border border-[#1e2923] space-y-1.5">
               <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
                 Select Your Role in Kurnool
@@ -515,17 +545,38 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             </>
           )}
 
+          {/* GOOGLE VERIFY MODE: Name Input */}
+          {authMode === 'google_verify' && (
+            <div>
+              <label className="block text-slate-300 font-bold mb-1">Your Name (Google Account) *</label>
+              <div className="relative">
+                <UserIcon className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-3" />
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Anil Kumar"
+                  className="w-full pl-8 pr-3 py-2.5 rounded-xl bg-[#16201b] border border-[#1e2923] text-white focus:outline-none focus:border-sport-500"
+                />
+              </div>
+            </div>
+          )}
+
           {/* EMAIL ADDRESS FIELD */}
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="text-slate-300 font-bold">
-                {authMode === 'login' ? 'Your Existing Email Address *' : 'Your Genuine Email Address *'}
+                {authMode === 'login'
+                  ? 'Your Existing Email Address *'
+                  : authMode === 'google_verify'
+                  ? 'Your Google / Gmail Address *'
+                  : 'Your Genuine Email Address *'}
               </label>
-              {(authMode === 'register' || authMode === 'forgot_password') && (
+              {(authMode === 'register' || authMode === 'google_verify' || authMode === 'forgot_password') && (
                 <button
                   type="button"
                   disabled={otpSending || otpTimer > 0}
-                  onClick={() => handleSendOtp(authMode === 'register' ? 'register' : 'reset_password')}
+                  onClick={() => handleSendOtp(authMode === 'forgot_password' ? 'reset_password' : 'register')}
                   className="text-[11px] text-sport-400 hover:underline font-bold flex items-center space-x-1 disabled:opacity-40"
                 >
                   <Send className="w-3 h-3" />
@@ -535,7 +586,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                       : otpTimer > 0
                       ? `Resend in ${otpTimer}s`
                       : otpSent
-                      ? 'Resend OTP Code'
+                      ? 'Resend OTP'
                       : 'Send 6-Digit OTP'}
                   </span>
                 </button>
@@ -548,7 +599,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="yourname@gmail.com"
+                placeholder={authMode === 'google_verify' ? 'yourname@gmail.com' : 'name@example.com'}
                 className="w-full pl-8 pr-3 py-2.5 rounded-xl bg-[#16201b] border border-[#1e2923] text-white focus:outline-none focus:border-sport-500"
                 required
               />
@@ -561,7 +612,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold text-sport-400 uppercase tracking-wider flex items-center space-x-1">
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>Email Verification Code Sent</span>
+                  <span>Verification Code Dispatched</span>
                 </span>
                 <span className="text-[11px] font-mono font-black text-white bg-sport-500/20 px-2 py-0.5 rounded border border-sport-500/30">
                   {previewOtp}
@@ -573,11 +624,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             </div>
           )}
 
-          {/* OTP CODE INPUT (FOR REGISTER & FORGOT PASSWORD) */}
-          {(authMode === 'register' || authMode === 'forgot_password') && (
+          {/* OTP CODE INPUT (FOR REGISTER, GOOGLE VERIFY & FORGOT PASSWORD) */}
+          {(authMode === 'register' || authMode === 'google_verify' || authMode === 'forgot_password') && (
             <div>
               <label className="block text-slate-300 font-bold mb-1">
-                6-Digit Email Verification Code (OTP) *
+                6-Digit Verification Code (OTP) *
               </label>
               <div className="relative">
                 <KeyRound className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-3" />
@@ -594,8 +645,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             </div>
           )}
 
-          {/* PASSWORD FIELD (FOR LOGIN & REGISTER) */}
-          {authMode !== 'forgot_password' && (
+          {/* PASSWORD FIELD (FOR LOGIN & REGISTER ONLY) */}
+          {(authMode === 'login' || authMode === 'register') && (
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-slate-300 font-bold">
@@ -663,6 +714,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 ? 'Sign In with Password'
                 : authMode === 'register'
                 ? 'Verify Email & Create Account'
+                : authMode === 'google_verify'
+                ? 'Verify OTP & Complete Google Sign-In'
                 : 'Verify Code & Set New Password'}
             </span>
             {!loading && <ArrowRight className="w-4 h-4" />}

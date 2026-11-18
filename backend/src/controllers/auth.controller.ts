@@ -266,7 +266,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
 export const googleAuth = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { credential, email, name, picture, googleId, role } = req.body;
+    const { credential, email, name, picture, googleId, role, otp } = req.body;
 
     let userEmail = email;
     let userName = name;
@@ -293,12 +293,24 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
     }
 
     if (!userEmail) {
-      res.status(400).json({ success: false, error: 'Google authentication did not provide a valid email address.' });
+      res.status(400).json({ success: false, error: 'Google authentication requires a valid email address.' });
       return;
     }
 
+    const cleanEmail = String(userEmail).trim().toLowerCase();
+
+    // If OTP is provided, verify it before authenticating Google email
+    if (otp) {
+      const otpCheck = emailService.verifyOtp(cleanEmail, otp, 'register');
+      if (!otpCheck.valid) {
+        res.status(400).json({ success: false, error: otpCheck.error || 'Invalid 6-digit Google verification code.' });
+        return;
+      }
+      emailService.clearOtp(cleanEmail);
+    }
+
     // Lookup existing user
-    let user = store.findUserByEmail(userEmail);
+    let user = store.findUserByEmail(cleanEmail);
 
     if (user) {
       // Existing user: Link Google details & update avatar
@@ -322,9 +334,9 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
       const newUserId = `usr_g_${Date.now()}`;
       user = {
         id: newUserId,
-        name: userName || userEmail.split('@')[0],
-        email: userEmail,
-        avatarUrl: userPicture || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userName || userEmail)}`,
+        name: userName || cleanEmail.split('@')[0],
+        email: cleanEmail,
+        avatarUrl: userPicture || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userName || cleanEmail)}`,
         role: role === 'owner' ? 'owner' : 'player',
         authProvider: 'google',
         googleId: userGoogleId || `gid_${Date.now()}`,

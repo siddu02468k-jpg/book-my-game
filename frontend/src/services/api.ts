@@ -227,6 +227,7 @@ class ApiService {
     picture?: string;
     googleId?: string;
     role?: 'player' | 'owner';
+    otp?: string;
   }): Promise<User> {
     const res = await this.request<any>('/api/auth/google', {
       method: 'POST',
