@@ -171,11 +171,35 @@ class ApiService {
     }
   }
 
-  // Auth
-  public async register(name: string, email: string, password: string, phone?: string, role: string = 'player'): Promise<User> {
+  // Auth & OTP
+  public async sendOtp(email: string, purpose: 'register' | 'login' | 'reset_password' = 'register'): Promise<{ message: string; previewCode?: string; retryAfter?: number }> {
+    const res = await this.request<{ success: boolean; message: string; previewCode?: string; retryAfter?: number }>('/api/auth/send-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, purpose }),
+    });
+    return res;
+  }
+
+  public async verifyOtp(email: string, code: string, purpose: 'register' | 'login' | 'reset_password' = 'register'): Promise<{ message: string }> {
+    const res = await this.request<{ success: boolean; message: string }>('/api/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, code, purpose }),
+    });
+    return res;
+  }
+
+  public async resetPassword(email: string, otp: string, newPassword: string): Promise<{ message: string }> {
+    const res = await this.request<{ success: boolean; message: string }>('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp, newPassword }),
+    });
+    return res;
+  }
+
+  public async register(name: string, email: string, password: string, phone?: string, role: string = 'player', otp?: string): Promise<User> {
     const res = await this.request<any>('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ name, email, password, phone, role }),
+      body: JSON.stringify({ name, email, password, phone, role, otp }),
     });
 
     this.setToken(res.data.token);

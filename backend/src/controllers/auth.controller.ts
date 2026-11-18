@@ -4,29 +4,166 @@ import jwt from 'jsonwebtoken';
 import { store } from '../db/store';
 import { JWT_SECRET, AuthenticatedRequest } from '../middleware/auth';
 import { User } from '../types';
+import { emailService } from '../utils/emailService';
+
+export const sendOtp = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, purpose } = req.body;
+    if (!email || !String(email).includes('@')) {
+      res.status(400).json({ success: false, error: 'A valid email address is required.' });
+      return;
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+    const actionPurpose = purpose === 'reset_password' ? 'reset_password' : 'register';
+
+    if (actionPurpose === 'register') {
+      const existing = store.findUserByEmail(cleanEmail);
+      if (existing) {
+        res.status(409).json({
+          success: false,
+          error: 'An account with this email address already exists. Please sign in with your password.'
+        });
+        return;
+      }
+    } else if (actionPurpose === 'reset_password') {
+      const existing = store.findUserByEmail(cleanEmail);
+      if (!existing) {
+        res.status(404).json({
+          success: false,
+          error: 'No account registered with this email address. Please sign up first.'
+        });
+        return;
+      }
+    }
+
+    const result = await emailService.sendOtp(cleanEmail, actionPurpose);
+    if (!result.success) {
+      res.status(429).json({ success: false, error: result.message, retryAfter: result.retryAfter });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: result.message,
+      previewCode: result.previewCode
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message || 'Failed to dispatch verification code.' });
+  }
+};
+
+export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, code, purpose } = req.body;
+    if (!email || !code) {
+      res.status(400).json({ success: false, error: 'Email and 6-digit verification code are required.' });
+      return;
+    }
+
+    const result = emailService.verifyOtp(email, code, purpose);
+    if (!result.valid) {
+      res.status(400).json({ success: false, error: result.error || 'Invalid code.' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: 'Email address successfully verified!'
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message || 'Verification failed.' });
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword) {
+      res.status(400).json({ success: false, error: 'Email, verification code, and new password are required.' });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      res.status(400).json({ success: false, error: 'New password must be at least 6 characters long.' });
+      return;
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+    const user = store.findUserByEmail(cleanEmail);
+    if (!user) {
+      res.status(404).json({ success: false, error: 'No account found with this email address.' });
+      return;
+    }
+
+    const verifyCheck = emailService.verifyOtp(cleanEmail, otp, 'reset_password');
+    if (!verifyCheck.valid) {
+      res.status(400).json({ success: false, error: verifyCheck.error || 'Invalid or expired verification code.' });
+      return;
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.passwordHash = await bcrypt.hash(newPassword, salt);
+    user.emailVerified = true;
+    store.updateUser(user);
+    emailService.clearOtp(cleanEmail);
+
+    res.json({
+      success: true,
+      message: 'Password reset successfully! You can now log in with your new password.'
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message || 'Password reset failed.' });
+  }
+};
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, email, password, phone, role } = req.body;
+    const { name, email, password, phone, role, otp } = req.body;
 
     if (!name || !email || !password) {
       res.status(400).json({ success: false, error: 'Name, email, and password are required' });
       return;
     }
 
-    if (store.findUserByEmail(email)) {
-      res.status(409).json({ success: false, error: 'A user with this email already exists' });
+    if (password.length < 6) {
+      res.status(400).json({ success: false, error: 'Password must be at least 6 characters long.' });
       return;
     }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+
+    if (store.findUserByEmail(cleanEmail)) {
+      res.status(409).json({ success: false, error: 'An account with this email already exists. Please sign in.' });
+      return;
+    }
+
+    // Email OTP Verification requirement:
+    // User must either supply valid OTP or have previously verified OTP in this session
+    if (otp) {
+      const otpCheck = emailService.verifyOtp(cleanEmail, otp, 'register');
+      if (!otpCheck.valid) {
+        res.status(400).json({ success: false, error: otpCheck.error || 'Invalid OTP code.' });
+        return;
+      }
+    } else if (!emailService.isEmailVerified(cleanEmail)) {
+      res.status(400).json({
+        success: false,
+        error: 'Please verify your email address using the 6-digit OTP code before completing registration.'
+      });
+      return;
+    }
+
+    emailService.clearOtp(cleanEmail);
 
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
     const newUser: User = {
       id: `usr_${Date.now()}`,
-      name,
-      email,
-      phone: phone || '',
+      name: name.trim(),
+      email: cleanEmail,
+      phone: phone ? phone.trim() : '',
       passwordHash,
       avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
       role: role === 'owner' ? 'owner' : 'player',
@@ -45,7 +182,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     res.status(201).json({
       success: true,
-      message: 'Account registered successfully',
+      message: 'Account registered and email verified successfully!',
       data: {
         token,
         user: {
@@ -74,9 +211,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const user = store.findUserByEmail(email);
+    const cleanEmail = String(email).trim().toLowerCase();
+    const user = store.findUserByEmail(cleanEmail);
     if (!user) {
-      res.status(401).json({ success: false, error: 'Invalid email or password' });
+      res.status(401).json({ success: false, error: 'No registered account found with this email address. Please register.' });
       return;
     }
 
@@ -84,7 +222,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     if (!user.passwordHash && user.authProvider === 'google') {
       res.status(400).json({
         success: false,
-        error: 'This account was created with Google. Please use Continue with Google to sign in.'
+        error: 'This account was registered using Google. Please click "Continue with Google" to sign in.'
       });
       return;
     }
@@ -92,7 +230,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     if (user.passwordHash) {
       const isMatch = await bcrypt.compare(password, user.passwordHash);
       if (!isMatch) {
-        res.status(401).json({ success: false, error: 'Invalid email or password' });
+        res.status(401).json({ success: false, error: 'Incorrect password for this account. Please try again or reset your password.' });
         return;
       }
     }
