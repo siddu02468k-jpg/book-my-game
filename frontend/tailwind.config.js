@@ -25,6 +25,9 @@ export default {
       boxShadow: {
         'glow': '0 0 25px -5px rgba(34, 197, 94, 0.3)',
         'glow-sm': '0 0 15px -3px rgba(34, 197, 94, 0.25)',
+        'glow-neon': '0 0 35px -5px rgba(34, 197, 94, 0.45)',
+        'glow-card': '0 10px 30px -10px rgba(0, 0, 0, 0.7), 0 0 20px -3px rgba(34, 197, 94, 0.15)',
+        'glow-amber': '0 0 25px -5px rgba(245, 158, 11, 0.35)',
       },
       padding: {
         'safe-top': 'env(safe-area-inset-top)',

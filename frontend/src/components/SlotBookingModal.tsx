@@ -12,8 +12,11 @@ import {
   Smartphone,
   ArrowRight,
   QrCode,
-  ShieldCheck,
-  ExternalLink
+  Sunrise,
+  Sun,
+  Moon,
+  Sparkles,
+  ShieldCheck
 } from 'lucide-react';
 import { Venue, SlotAvailability, Booking } from '../types';
 import { api } from '../services/api';
@@ -197,7 +200,7 @@ _Show this message to the venue operator upon arrival._`;
   const platformFee = Math.round(baseSlotAmount * (venue.commissionRate || 0.09)); // 9% Platform Fee added on top (e.g. ₹90)
   const totalAmount = baseSlotAmount + platformFee; // Total customer pays (e.g. ₹1,090)
 
-  // Method 1: Real NPCI standard UPI Payment Payload directly to Venue Owner
+  // NPCI standard UPI Payment Payload directly to Venue Owner
   const upiId = venue.ownerUpiId || 'bookmygame@upi';
   const bookingRefForUpi = pendingBooking?.bookingRef || 'BMG';
   const upiPayPayload = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(venue.name)}&am=${totalAmount}.00&cu=INR&tn=${encodeURIComponent('Slot Booking ' + bookingRefForUpi)}`;
@@ -209,16 +212,69 @@ _Show this message to the venue operator upon arrival._`;
     ? `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(entryPassPayload)}&color=22c55e&bgcolor=0f1512`
     : '';
 
+  // Segregate slots into daylight / evening segments
+  const morningSlots = slots.filter((s) => s.hour >= 6 && s.hour < 12);
+  const afternoonSlots = slots.filter((s) => s.hour >= 12 && s.hour < 17);
+  const eveningSlots = slots.filter((s) => s.hour >= 17 && s.hour <= 23);
+
+  const renderSlotGrid = (sectionSlots: SlotAvailability[]) => (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+      {sectionSlots.map((slot) => {
+        const isSelected = selectedStartHour === slot.hour;
+        const isDisabled = slot.isBooked || slot.isPast;
+
+        return (
+          <button
+            key={slot.hour}
+            type="button"
+            disabled={isDisabled}
+            onClick={() => handleSelectSlot(slot.hour)}
+            className={`p-2.5 rounded-2xl border text-left transition-all relative overflow-hidden active:scale-95 ${
+              isSelected
+                ? 'bg-sport-500 text-black border-sport-400 shadow-glow font-black ring-2 ring-sport-400'
+                : isDisabled
+                ? 'bg-[#101713]/40 text-slate-600 border-slate-800/60 cursor-not-allowed line-through'
+                : 'bg-[#16201b] hover:bg-[#1f2d26] text-slate-200 border-[#1e2923] hover:border-sport-500/50 hover:shadow-glow-sm'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className={`text-xs font-bold ${isSelected ? 'text-black' : 'text-white'}`}>
+                {slot.timeString}
+              </span>
+              {isSelected && (
+                <span className="w-2 h-2 rounded-full bg-black animate-ping" />
+              )}
+            </div>
+            <div className={`text-[10px] mt-1 font-semibold flex items-center justify-between ${
+              isSelected ? 'text-black/80 font-bold' : isDisabled ? 'text-slate-600' : 'text-sport-400'
+            }`}>
+              <span>{slot.isBooked ? 'Booked' : slot.isPast ? 'Passed' : `₹${slot.price}`}</span>
+              {!isDisabled && !isSelected && (
+                <span className="text-[9px] text-slate-500 font-normal">Available</span>
+              )}
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-[#0f1512] border border-[#1e2923] w-full max-w-2xl rounded-t-3xl sm:rounded-2xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl safe-padding-bottom">
+      <div className="bg-[#0f1512] border border-[#1e2923] w-full max-w-2xl rounded-t-3xl sm:rounded-3xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl safe-padding-bottom">
         
-        {/* Header */}
-        <div className="px-5 py-4 border-b border-[#1e2923] flex items-center justify-between bg-[#0a0f0d]/80">
+        {/* Modal Header */}
+        <div className="px-5 py-4 border-b border-[#1e2923] flex items-center justify-between bg-[#0a0f0d]/90">
           <div>
-            <h2 className="text-base sm:text-lg font-black text-white uppercase tracking-tight flex items-center space-x-2">
-              <span>{venue.name}</span>
-            </h2>
+            <div className="flex items-center space-x-2">
+              <h2 className="text-base sm:text-lg font-black text-white uppercase tracking-tight">
+                {venue.name}
+              </h2>
+              <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-sport-500/10 border border-sport-500/20 text-sport-400 text-[10px] font-bold">
+                <ShieldCheck className="w-3 h-3" />
+                <span>Verified Turf</span>
+              </span>
+            </div>
             <div className="flex items-center space-x-1 text-slate-400 text-xs mt-0.5">
               <MapPin className="w-3 h-3 text-sport-400" />
               <span>{venue.area}, Kurnool</span>
@@ -229,35 +285,35 @@ _Show this message to the venue operator upon arrival._`;
               triggerHaptic();
               onClose();
             }}
-            className="p-1.5 rounded-lg bg-[#16201b] text-slate-400 hover:text-white border border-[#1e2923] transition"
+            className="p-1.5 rounded-xl bg-[#16201b] text-slate-400 hover:text-white border border-[#1e2923] transition active:scale-95"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5 smooth-scroll">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5 no-scrollbar">
           
           {/* STAGE 2: REAL UPI PAYMENT QR CODE TO TURF OWNER */}
           {currentStage === 'upi_payment' && pendingBooking && (
             <div className="py-4 text-center space-y-4">
-              <span className="text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full bg-sport-500/10 text-sport-400 border border-sport-500/20">
+              <span className="text-[10px] font-extrabold tracking-wider uppercase px-3 py-1 rounded-full bg-sport-500/10 text-sport-400 border border-sport-500/30">
                 Direct Payment to Turf Owner
               </span>
               <h3 className="text-xl font-black text-white">
                 Pay ₹{totalAmount} to {venue.name}
               </h3>
-              <p className="text-xs text-slate-300 max-w-xs mx-auto">
-                Scan with PhonePe, Google Pay, or Paytm. 100% of your payment transfers instantly to the turf owner's bank account.
+              <p className="text-xs text-slate-300 max-w-xs mx-auto leading-relaxed">
+                Scan with PhonePe, Google Pay, or Paytm. 100% of your court fee transfers directly to the turf owner's bank account.
               </p>
-              <div className="flex items-center justify-center space-x-2 text-xs text-slate-400">
-                <span>Court Fee: <strong className="text-white">₹{baseSlotAmount}</strong></span>
+              <div className="flex items-center justify-center space-x-2 text-xs text-slate-400 bg-[#16201b] py-2 px-3 rounded-xl max-w-xs mx-auto border border-[#1e2923]">
+                <span>Court: <strong className="text-white">₹{baseSlotAmount}</strong></span>
                 <span>•</span>
-                <span>Convenience Fee (9%): <strong className="text-sport-400">₹{platformFee}</strong></span>
+                <span>Fee (9%): <strong className="text-sport-400">₹{platformFee}</strong></span>
               </div>
 
               {/* Real UPI QR Box */}
-              <div className="bg-white p-4 rounded-3xl max-w-[240px] mx-auto shadow-glow flex flex-col items-center justify-center">
+              <div className="bg-white p-4 rounded-3xl max-w-[240px] mx-auto shadow-glow flex flex-col items-center justify-center border-4 border-sport-500/30">
                 <img 
                   src={upiPaymentQrUrl} 
                   alt="UPI Payment QR" 
@@ -275,7 +331,7 @@ _Show this message to the venue operator upon arrival._`;
               <div className="pt-2 max-w-xs mx-auto space-y-2">
                 <a
                   href={upiPayPayload}
-                  className="w-full py-2.5 rounded-xl bg-sport-500 hover:bg-sport-400 text-black font-extrabold text-xs shadow-glow flex items-center justify-center space-x-1 transition"
+                  className="w-full py-3 rounded-2xl bg-sport-500 hover:bg-sport-400 text-black font-black text-xs shadow-glow flex items-center justify-center space-x-2 transition active:scale-95"
                 >
                   <Smartphone className="w-4 h-4" />
                   <span>Open UPI App on Phone</span>
@@ -285,7 +341,7 @@ _Show this message to the venue operator upon arrival._`;
                   type="button"
                   onClick={handleCompleteUpiPayment}
                   disabled={submitting}
-                  className="w-full py-2.5 rounded-xl bg-[#16201b] hover:bg-[#1f2c25] text-sport-400 border border-sport-500/40 font-bold text-xs flex items-center justify-center space-x-1 transition"
+                  className="w-full py-2.5 rounded-2xl bg-[#16201b] hover:bg-[#1f2c25] text-sport-400 border border-sport-500/40 font-bold text-xs flex items-center justify-center space-x-1.5 transition active:scale-95"
                 >
                   <CheckCircle2 className="w-4 h-4" />
                   <span>{submitting ? 'Verifying...' : 'I Have Paid (Get Match Pass)'}</span>
@@ -297,11 +353,11 @@ _Show this message to the venue operator upon arrival._`;
           {/* STAGE 3: MATCH ENTRY PASS TICKET */}
           {currentStage === 'confirmed' && confirmedBooking && (
             <div className="py-4 text-center space-y-4">
-              <div className="w-14 h-14 rounded-full bg-sport-500/20 text-sport-400 border border-sport-500/40 flex items-center justify-center mx-auto shadow-glow">
+              <div className="w-14 h-14 rounded-2xl bg-sport-500/20 text-sport-400 border border-sport-500/40 flex items-center justify-center mx-auto shadow-glow">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
               <div>
-                <span className="text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full bg-sport-500/10 text-sport-400 border border-sport-500/20">
+                <span className="text-[10px] font-extrabold tracking-wider uppercase px-3 py-1 rounded-full bg-sport-500/10 text-sport-400 border border-sport-500/30">
                   {confirmedBooking.paymentStatus === 'paid' ? 'Paid & Confirmed' : 'Slot Confirmed (Pay at Venue)'}
                 </span>
                 <h3 className="text-2xl font-black text-white mt-2">
@@ -316,27 +372,27 @@ _Show this message to the venue operator upon arrival._`;
               <div className="bg-[#16201b] border border-sport-500/40 rounded-3xl p-5 text-left max-w-sm mx-auto shadow-glow relative overflow-hidden">
                 <div className="flex items-center justify-between pb-3 border-b border-[#1e2923]">
                   <div>
-                    <span className="text-[9px] text-sport-400 font-extrabold uppercase tracking-widest block">MATCH ENTRY PASS</span>
+                    <span className="text-[9px] text-sport-400 font-black uppercase tracking-widest block">MATCH ENTRY PASS</span>
                     <h4 className="text-sm font-black text-white">{confirmedBooking.venueName}</h4>
                   </div>
                   <div className="text-right">
-                    <span className="font-mono text-xs font-bold text-white bg-[#0a0f0d] px-2 py-0.5 rounded border border-[#1e2923]">
+                    <span className="font-mono text-xs font-bold text-white bg-[#0a0f0d] px-2.5 py-1 rounded-lg border border-[#1e2923]">
                       {confirmedBooking.bookingRef}
                     </span>
                   </div>
                 </div>
 
-                {/* Entry Pass QR Code (Scannable by Owner Console) */}
+                {/* Entry Pass QR Code */}
                 <div className="py-4 flex flex-col items-center justify-center">
-                  <div className="p-2.5 rounded-2xl bg-[#0f1512] border border-sport-500/30 shadow-inner">
+                  <div className="p-3 rounded-2xl bg-[#0f1512] border border-sport-500/30 shadow-inner">
                     <img 
                       src={entryPassQrUrl} 
                       alt={`Pass ${confirmedBooking.bookingRef}`} 
-                      className="w-36 h-36 rounded-lg object-contain" 
+                      className="w-36 h-36 rounded-xl object-contain" 
                     />
                   </div>
                   <span className="text-[10px] text-slate-400 mt-2 flex items-center space-x-1">
-                    <QrCode className="w-3 h-3 text-sport-400" />
+                    <QrCode className="w-3.5 h-3.5 text-sport-400" />
                     <span>Scan at turf counter for instant check-in</span>
                   </span>
                 </div>
@@ -368,7 +424,7 @@ _Show this message to the venue operator upon arrival._`;
                 <button
                   type="button"
                   onClick={handleShareWhatsApp}
-                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md flex items-center justify-center space-x-2 transition active:scale-95"
+                  className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md flex items-center justify-center space-x-2 transition active:scale-95"
                 >
                   <Share2 className="w-4 h-4" />
                   <span>Send Ticket to WhatsApp</span>
@@ -380,7 +436,7 @@ _Show this message to the venue operator upon arrival._`;
                     triggerHaptic();
                     onClose();
                   }}
-                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#16201b] hover:bg-[#1e2923] text-slate-200 border border-[#1e2923] font-bold text-xs"
+                  className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-[#16201b] hover:bg-[#1e2923] text-slate-200 border border-[#1e2923] font-bold text-xs"
                 >
                   Done
                 </button>
@@ -395,7 +451,7 @@ _Show this message to the venue operator upon arrival._`;
               
               {/* Error banner */}
               {error && (
-                <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-800 text-rose-300 text-xs flex items-center space-x-2">
+                <div className="p-3 rounded-2xl bg-rose-950/60 border border-rose-800 text-rose-300 text-xs flex items-center space-x-2">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -404,7 +460,7 @@ _Show this message to the venue operator upon arrival._`;
               {/* 1. Pick Sport */}
               {venue.sports.length > 1 && (
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-black text-slate-300 uppercase tracking-wider mb-2">
                     1. Select Sport
                   </label>
                   <div className="flex flex-wrap gap-2">
@@ -416,7 +472,7 @@ _Show this message to the venue operator upon arrival._`;
                           triggerHaptic();
                           setSelectedSport(sp);
                         }}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize border transition-all ${
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold capitalize border transition-all active:scale-95 ${
                           selectedSport === sp
                             ? 'bg-sport-500 text-black border-sport-400 shadow-glow-sm'
                             : 'bg-[#16201b] text-slate-300 border-[#1e2923] hover:border-slate-600'
@@ -432,14 +488,14 @@ _Show this message to the venue operator upon arrival._`;
               {/* 2. Pick Date & Duration */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-black text-slate-300 uppercase tracking-wider mb-2">
                     2. Select Date
                   </label>
                   <div className="flex space-x-2">
                     <button
                       type="button"
                       onClick={() => handleDateChange(todayStr)}
-                      className={`flex-1 py-2 rounded-xl text-xs font-bold border transition ${
+                      className={`flex-1 py-2 rounded-xl text-xs font-bold border transition active:scale-95 ${
                         selectedDate === todayStr
                           ? 'bg-sport-500 text-black border-sport-400 shadow-glow-sm'
                           : 'bg-[#16201b] text-slate-300 border-[#1e2923]'
@@ -450,7 +506,7 @@ _Show this message to the venue operator upon arrival._`;
                     <button
                       type="button"
                       onClick={() => handleDateChange(tomorrowStr)}
-                      className={`flex-1 py-2 rounded-xl text-xs font-bold border transition ${
+                      className={`flex-1 py-2 rounded-xl text-xs font-bold border transition active:scale-95 ${
                         selectedDate === tomorrowStr
                           ? 'bg-sport-500 text-black border-sport-400 shadow-glow-sm'
                           : 'bg-[#16201b] text-slate-300 border-[#1e2923]'
@@ -463,14 +519,14 @@ _Show this message to the venue operator upon arrival._`;
                       value={selectedDate}
                       min={todayStr}
                       onChange={(e) => handleDateChange(e.target.value)}
-                      className="px-2 py-1.5 rounded-xl bg-[#16201b] border border-[#1e2923] text-xs text-white focus:outline-none focus:border-sport-500"
+                      className="px-2.5 py-1.5 rounded-xl bg-[#16201b] border border-[#1e2923] text-xs text-white focus:outline-none focus:border-sport-500"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
-                    Duration
+                  <label className="block text-xs font-black text-slate-300 uppercase tracking-wider mb-2">
+                    Match Duration
                   </label>
                   <div className="flex space-x-2">
                     {[1, 2, 3].map((hrs) => (
@@ -482,7 +538,7 @@ _Show this message to the venue operator upon arrival._`;
                           setDuration(hrs);
                           setSelectedStartHour(null);
                         }}
-                        className={`flex-1 py-2 rounded-xl text-xs font-bold border transition ${
+                        className={`flex-1 py-2 rounded-xl text-xs font-bold border transition active:scale-95 ${
                           duration === hrs
                             ? 'bg-sport-500 text-black border-sport-400 shadow-glow-sm'
                             : 'bg-[#16201b] text-slate-300 border-[#1e2923]'
@@ -495,11 +551,12 @@ _Show this message to the venue operator upon arrival._`;
                 </div>
               </div>
 
-              {/* 3. Hourly Slot Matrix */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                    3. Select Start Slot
+              {/* 3. Segmented Time-of-Day Slots */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-sport-400" />
+                    <span>3. Choose Your Slot</span>
                   </label>
                   <div className="flex items-center space-x-3 text-[10px] text-slate-400">
                     <span className="flex items-center space-x-1">
@@ -514,43 +571,66 @@ _Show this message to the venue operator upon arrival._`;
                 </div>
 
                 {loadingSlots ? (
-                  <div className="py-8 text-center text-xs text-slate-400">
+                  <div className="py-12 text-center text-xs text-slate-400 bg-[#16201b]/50 rounded-2xl border border-[#1e2923]">
                     Checking live slot availability...
                   </div>
+                ) : slots.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-slate-400 bg-[#16201b]/50 rounded-2xl border border-[#1e2923]">
+                    No slot data configured for this date.
+                  </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                    {slots.map((slot) => {
-                      const isSelected = selectedStartHour === slot.hour;
-                      const isDisabled = slot.isBooked || slot.isPast;
+                  <div className="space-y-4">
+                    {/* Segment 1: Morning */}
+                    {morningSlots.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-1.5 text-xs font-bold text-amber-400">
+                          <Sunrise className="w-4 h-4" />
+                          <span>Morning Slots (06:00 - 12:00)</span>
+                          <span className="text-[10px] text-slate-500 font-normal ml-auto">
+                            {morningSlots.filter(s => !s.isBooked && !s.isPast).length} open
+                          </span>
+                        </div>
+                        {renderSlotGrid(morningSlots)}
+                      </div>
+                    )}
 
-                      return (
-                        <button
-                          key={slot.hour}
-                          type="button"
-                          disabled={isDisabled}
-                          onClick={() => handleSelectSlot(slot.hour)}
-                          className={`p-2.5 rounded-xl border text-left transition-all ${
-                            isSelected
-                              ? 'bg-sport-500 text-black border-sport-400 shadow-glow font-bold'
-                              : isDisabled
-                              ? 'bg-slate-900/50 text-slate-600 border-slate-800/80 cursor-not-allowed line-through'
-                              : 'bg-[#16201b] hover:bg-[#1f2c25] text-slate-200 border-[#1e2923] hover:border-sport-500/40'
-                          }`}
-                        >
-                          <div className="text-xs font-semibold">{slot.timeString}</div>
-                          <div className={`text-[10px] mt-0.5 ${isSelected ? 'text-black' : isDisabled ? 'text-slate-600' : 'text-sport-400'}`}>
-                            {slot.isBooked ? 'Booked' : slot.isPast ? 'Passed' : `₹${slot.price}`}
-                          </div>
-                        </button>
-                      );
-                    })}
+                    {/* Segment 2: Afternoon */}
+                    {afternoonSlots.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-1.5 text-xs font-bold text-orange-400">
+                          <Sun className="w-4 h-4" />
+                          <span>Afternoon Slots (12:00 - 17:00)</span>
+                          <span className="text-[10px] text-slate-500 font-normal ml-auto">
+                            {afternoonSlots.filter(s => !s.isBooked && !s.isPast).length} open
+                          </span>
+                        </div>
+                        {renderSlotGrid(afternoonSlots)}
+                      </div>
+                    )}
+
+                    {/* Segment 3: Floodlit Evening */}
+                    {eveningSlots.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-1.5 text-xs font-bold text-emerald-400">
+                          <Moon className="w-4 h-4" />
+                          <span>Floodlit Evening (17:00 - 23:00)</span>
+                          <span className="text-[10px] px-2 py-0.2 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
+                            Peak Hours
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-normal ml-auto">
+                            {eveningSlots.filter(s => !s.isBooked && !s.isPast).length} open
+                          </span>
+                        </div>
+                        {renderSlotGrid(eveningSlots)}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
               {/* 4. Player Details Form */}
               <div className="pt-2 border-t border-[#1e2923]">
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-black text-slate-300 uppercase tracking-wider mb-2">
                   4. Player Details
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -603,7 +683,7 @@ _Show this message to the venue operator upon arrival._`;
 
               {/* 5. Payment Method Selector */}
               <div className="pt-2 border-t border-[#1e2923]">
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-black text-slate-300 uppercase tracking-wider mb-2">
                   5. Payment Preference
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -613,10 +693,10 @@ _Show this message to the venue operator upon arrival._`;
                       triggerHaptic();
                       setPaymentChoice('pay_at_venue');
                     }}
-                    className={`p-3 rounded-xl border text-left flex items-start space-x-3 transition ${
+                    className={`p-3 rounded-2xl border text-left flex items-start space-x-3 transition active:scale-95 ${
                       paymentChoice === 'pay_at_venue'
-                        ? 'bg-sport-500/10 border-sport-500 text-white shadow-glow-sm'
-                        : 'bg-[#16201b] border-[#1e2923] text-slate-400'
+                        ? 'bg-sport-500/10 border-sport-500 text-white shadow-glow-sm ring-1 ring-sport-500'
+                        : 'bg-[#16201b] border-[#1e2923] text-slate-400 hover:border-slate-700'
                     }`}
                   >
                     <IndianRupee className="w-5 h-5 text-sport-400 flex-shrink-0 mt-0.5" />
@@ -632,29 +712,29 @@ _Show this message to the venue operator upon arrival._`;
                       triggerHaptic();
                       setPaymentChoice('upi');
                     }}
-                    className={`p-3 rounded-xl border text-left flex items-start space-x-3 transition ${
+                    className={`p-3 rounded-2xl border text-left flex items-start space-x-3 transition active:scale-95 ${
                       paymentChoice === 'upi'
-                        ? 'bg-sport-500/10 border-sport-500 text-white shadow-glow-sm'
-                        : 'bg-[#16201b] border-[#1e2923] text-slate-400'
+                        ? 'bg-sport-500/10 border-sport-500 text-white shadow-glow-sm ring-1 ring-sport-500'
+                        : 'bg-[#16201b] border-[#1e2923] text-slate-400 hover:border-slate-700'
                     }`}
                   >
                     <Smartphone className="w-5 h-5 text-sport-400 flex-shrink-0 mt-0.5" />
                     <div>
                       <span className="font-bold text-xs text-white block">UPI / Online Pay</span>
-                      <span className="text-[10px] text-slate-400">PhonePe, Google Pay, Paytm & QR code</span>
+                      <span className="text-[10px] text-slate-400">PhonePe, Google Pay, Paytm &amp; QR code</span>
                     </div>
                   </button>
                 </div>
               </div>
 
-              {/* Order Summary & Submit Button */}
-              <div className="bg-[#16201b] border border-[#1e2923] p-4 rounded-2xl space-y-3">
-                <div className="space-y-1.5 text-xs text-slate-300">
-                  <div className="flex justify-between">
+              {/* Sticky Checkout Summary & Submit Bar */}
+              <div className="sticky bottom-0 bg-[#111815]/95 backdrop-blur-xl border border-[#1e2923] p-4 rounded-3xl space-y-3 shadow-2xl -mx-1 sm:mx-0">
+                <div className="space-y-1 text-xs text-slate-300">
+                  <div className="flex justify-between items-center">
                     <span className="text-slate-400">Court Slot Rate ({duration} hr)</span>
                     <span className="text-white font-medium">₹{baseSlotAmount}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="text-slate-400">Platform Convenience Fee (9%)</span>
                     <span className="text-sport-400 font-medium">+₹{platformFee}</span>
                   </div>
@@ -663,24 +743,30 @@ _Show this message to the venue operator upon arrival._`;
                 <div className="pt-2 border-t border-[#1e2923] flex flex-col sm:flex-row items-center justify-between gap-3">
                   <div>
                     <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-bold">Total Payable</span>
-                    <div className="flex items-baseline space-x-1.5">
+                    <div className="flex items-baseline space-x-2">
                       <span className="text-2xl font-black text-white">₹{totalAmount}</span>
-                      <span className="text-xs text-sport-400 font-semibold">
+                      <span className="text-xs text-sport-400 font-bold">
                         {paymentChoice === 'upi' ? '(Online UPI)' : '(Pay at venue)'}
                       </span>
                     </div>
-                    {isWeekend && (
-                      <span className="text-[10px] text-amber-400 block font-medium">Weekend pricing applies</span>
+                    {selectedStartHour !== null ? (
+                      <span className="text-[11px] text-slate-300 block font-medium">
+                        Slot: {selectedStartHour}:00 - {selectedStartHour + duration}:00 ({duration} hr)
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-amber-400 block font-medium">
+                        Select a slot above to proceed
+                      </span>
                     )}
                   </div>
 
                   <button
                     type="submit"
                     disabled={submitting || selectedStartHour === null}
-                    className="w-full sm:w-auto px-6 py-3 rounded-xl bg-sport-500 hover:bg-sport-400 text-black font-extrabold text-sm transition shadow-glow active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                    className="w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-sport-500 hover:bg-sport-400 text-black font-black text-sm transition shadow-glow active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                   >
                     <span>
-                      {submitting ? 'Confirming...' : paymentChoice === 'upi' ? `Pay ₹${totalAmount} via UPI` : 'Confirm Slot'}
+                      {submitting ? 'Confirming...' : paymentChoice === 'upi' ? `Pay ₹${totalAmount} via UPI` : 'Confirm Slot Booking'}
                     </span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
