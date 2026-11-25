@@ -14,6 +14,7 @@ import { ToastNotification, ToastMessage } from './components/ToastNotification'
 import { Footer } from './components/Footer';
 import { PolicyModal, PolicyType } from './components/PolicyModal';
 import { PwaInstallBanner } from './components/PwaInstallBanner';
+import { LogoRevealModal } from './components/LogoRevealModal';
 import { User, Venue, Sport, Booking, BackendHealth } from './types';
 import { api } from './services/api';
 import { initMobileStatusBar, triggerHaptic } from './utils/device';
@@ -40,6 +41,7 @@ export const App: React.FC = () => {
   // Modals & UI States
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
+  const [isRevealOpen, setIsRevealOpen] = useState<boolean>(false);
   const [isSimulatedMobile, setIsSimulatedMobile] = useState<boolean>(false);
   const [loadingVenues, setLoadingVenues] = useState<boolean>(false);
   const [newBookingId, setNewBookingId] = useState<string | null>(null);
@@ -332,6 +334,7 @@ export const App: React.FC = () => {
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             onExecuteSearch={handleSearchExecute}
+            onOpenReveal={() => setIsRevealOpen(true)}
           />
         );
 
@@ -444,6 +447,7 @@ export const App: React.FC = () => {
               onOpenOwner={() => handleTabNavigate('owner')}
               onOpenProfile={() => handleTabNavigate('profile')}
               onNavigateHome={() => handleTabNavigate('home')}
+              onOpenReveal={() => setIsRevealOpen(true)}
             />
 
             <main className="flex-1 overflow-y-auto px-4 py-4 pb-20 smooth-scroll">
@@ -473,6 +477,7 @@ export const App: React.FC = () => {
             onOpenOwner={() => handleTabNavigate('owner')}
             onOpenProfile={() => handleTabNavigate('profile')}
             onNavigateHome={() => handleTabNavigate('home')}
+            onOpenReveal={() => setIsRevealOpen(true)}
           />
 
           <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-5">
@@ -512,6 +517,11 @@ export const App: React.FC = () => {
             `Welcome, ${loggedUser.name}! (${loggedUser.role === 'owner' ? 'Turf Owner' : 'Player'})`
           );
         }}
+      />
+
+      <LogoRevealModal
+        isOpen={isRevealOpen}
+        onClose={() => setIsRevealOpen(false)}
       />
     </div>
   );

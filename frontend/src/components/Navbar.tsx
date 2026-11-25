@@ -1,5 +1,5 @@
 import React from 'react';
-import { Smartphone, Monitor, MapPin, Wifi, WifiOff, LogIn, User as UserIcon, LogOut, ShieldCheck, Crown } from 'lucide-react';
+import { Smartphone, Monitor, MapPin, Wifi, WifiOff, LogIn, User as UserIcon, LogOut, ShieldCheck, Crown, Sparkles } from 'lucide-react';
 import { User, BackendHealth } from '../types';
 import { triggerHaptic } from '../utils/device';
 import { BrandLogo } from './BrandLogo';
@@ -14,6 +14,7 @@ interface NavbarProps {
   onOpenOwner: () => void;
   onOpenProfile?: () => void;
   onNavigateHome?: () => void;
+  onOpenReveal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -26,6 +27,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenOwner,
   onOpenProfile,
   onNavigateHome,
+  onOpenReveal,
 }) => {
   return (
     <header className="sticky top-0 z-40 bg-[#0a0f0d]/90 backdrop-blur-xl border-b border-[#1e2923] px-4 py-3 safe-padding-top transition-all shadow-md">
@@ -50,6 +52,21 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Controls & User State */}
         <div className="flex items-center space-x-2 sm:space-x-4">
           
+          {/* Brand Reveal Button */}
+          {onOpenReveal && (
+            <button
+              onClick={() => {
+                triggerHaptic();
+                onOpenReveal();
+              }}
+              className="flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-sport-500/15 hover:bg-sport-500/25 text-sport-400 border border-sport-500/30 transition shadow-glow-sm cursor-pointer"
+              title="Watch Book My Game Broadcast Reveal Animation"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-sport-400" />
+              <span className="hidden sm:inline">Logo Reveal</span>
+            </button>
+          )}
+
           {/* Backend Status */}
           <div 
             className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition ${

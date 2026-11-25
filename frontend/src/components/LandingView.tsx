@@ -14,6 +14,7 @@ interface LandingViewProps {
   searchQuery: string;
   onSearchChange: (q: string) => void;
   onExecuteSearch: () => void;
+  onOpenReveal?: () => void;
 }
 
 export const LandingView: React.FC<LandingViewProps> = ({
@@ -26,6 +27,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
   searchQuery,
   onSearchChange,
   onExecuteSearch,
+  onOpenReveal,
 }) => {
   const quickAreas = ['Budhawarpet', 'Joharapuram', 'Fort Area', 'River View', 'Nandyal Checkpost'];
 
@@ -40,10 +42,26 @@ export const LandingView: React.FC<LandingViewProps> = ({
 
         <div className="relative z-10 max-w-2xl">
           
-          {/* Animated Status Pill */}
-          <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-sport-500/10 border border-sport-500/30 text-sport-400 text-xs font-bold mb-5 uppercase tracking-wider backdrop-blur-md shadow-glow-sm">
-            <span className="w-2 h-2 rounded-full bg-sport-400 animate-pulse"></span>
-            <span>Live Turf Booking Across Kurnool</span>
+          {/* Animated Status Pill & Brand Reveal Button */}
+          <div className="flex flex-wrap items-center gap-2 mb-5">
+            <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-sport-500/10 border border-sport-500/30 text-sport-400 text-xs font-bold uppercase tracking-wider backdrop-blur-md shadow-glow-sm">
+              <span className="w-2 h-2 rounded-full bg-sport-400 animate-pulse"></span>
+              <span>Live Turf Booking Across Kurnool</span>
+            </div>
+
+            {onOpenReveal && (
+              <button
+                onClick={() => {
+                  triggerHaptic();
+                  onOpenReveal();
+                }}
+                className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full bg-sport-500/15 hover:bg-sport-500/25 border border-sport-500/40 text-sport-300 hover:text-white text-xs font-bold transition shadow-glow-sm cursor-pointer"
+                title="Watch Book My Game Broadcast Animation"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-sport-400 animate-spin" />
+                <span>Watch Brand Reveal</span>
+              </button>
+            )}
           </div>
 
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white uppercase tracking-tight leading-none drop-shadow-md">
