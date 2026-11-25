@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { X, Play, Pause, RotateCcw, Download, Sparkles, Volume2, VolumeX, Maximize2 } from 'lucide-react';
+import { X, Play, Pause, RotateCcw, Download, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { triggerHaptic } from '../utils/device';
 
 interface LogoRevealModalProps {
@@ -12,45 +12,57 @@ export const LogoRevealModal: React.FC<LogoRevealModalProps> = ({ isOpen, onClos
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
+  const [useFallback, setUseFallback] = useState<boolean>(false);
+  const [animKey, setAnimKey] = useState<number>(Date.now());
 
   useEffect(() => {
-    if (isOpen && videoRef.current) {
-      videoRef.current.currentTime = 0;
-      videoRef.current.play().then(() => {
-        setIsPlaying(true);
-      }).catch(() => {
-        setIsPlaying(false);
-      });
+    if (isOpen) {
+      setAnimKey(Date.now());
+      if (videoRef.current && !useFallback) {
+        videoRef.current.currentTime = 0;
+        videoRef.current.play().then(() => {
+          setIsPlaying(true);
+        }).catch(() => {
+          // If video playback fails (e.g. browser codec restriction), instantly switch to high-res animated WebP
+          setUseFallback(true);
+        });
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, useFallback]);
 
   if (!isOpen) return null;
 
   const togglePlay = () => {
     triggerHaptic();
-    if (!videoRef.current) return;
-    if (videoRef.current.paused) {
-      videoRef.current.play();
-      setIsPlaying(true);
+    if (!useFallback && videoRef.current) {
+      if (videoRef.current.paused) {
+        videoRef.current.play();
+        setIsPlaying(true);
+      } else {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      }
     } else {
-      videoRef.current.pause();
-      setIsPlaying(false);
+      setIsPlaying(!isPlaying);
     }
   };
 
   const handleReplay = () => {
     triggerHaptic();
-    if (!videoRef.current) return;
-    videoRef.current.currentTime = 0;
-    videoRef.current.play();
-    setIsPlaying(true);
+    setAnimKey(Date.now());
+    if (!useFallback && videoRef.current) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.play().catch(() => setUseFallback(true));
+      setIsPlaying(true);
+    }
   };
 
   const toggleMute = () => {
     triggerHaptic();
-    if (!videoRef.current) return;
-    videoRef.current.muted = !videoRef.current.muted;
-    setIsMuted(videoRef.current.muted);
+    if (videoRef.current) {
+      videoRef.current.muted = !videoRef.current.muted;
+      setIsMuted(videoRef.current.muted);
+    }
   };
 
   const handleTimeUpdate = () => {
@@ -79,34 +91,39 @@ export const LogoRevealModal: React.FC<LogoRevealModalProps> = ({ isOpen, onClos
               triggerHaptic();
               onClose();
             }}
-            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition"
+            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition cursor-pointer"
             title="Close"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Video Player Container (Cinematic 16:9 Letterboxed) */}
-        <div className="relative bg-black aspect-video flex items-center justify-center overflow-hidden group">
-          <video
-            ref={videoRef}
-            src="/book-my-game-reveal.mp4"
-            className="w-full h-full object-contain"
-            playsInline
-            autoPlay
-            loop
-            onTimeUpdate={handleTimeUpdate}
-            onClick={togglePlay}
-          />
-
-          {/* Center Play/Pause Overlay indicator */}
-          {!isPlaying && (
-            <button
+        {/* Video / Animated Player Container (Cinematic 16:9 Letterboxed) */}
+        <div className="relative bg-black aspect-video flex items-center justify-center overflow-hidden group select-none">
+          {!useFallback ? (
+            <video
+              ref={videoRef}
+              src="/book-my-game-reveal.mp4"
+              className="w-full h-full object-contain"
+              playsInline
+              autoPlay
+              loop
+              onError={() => {
+                console.warn('Video tag codec error, switching to Animated WebP fallback.');
+                setUseFallback(true);
+              }}
+              onTimeUpdate={handleTimeUpdate}
               onClick={togglePlay}
-              className="absolute inset-0 m-auto w-16 h-16 rounded-full bg-sport-500/90 text-black flex items-center justify-center shadow-lg shadow-sport-500/40 hover:scale-110 transition cursor-pointer"
-            >
-              <Play className="w-8 h-8 ml-1 fill-current" />
-            </button>
+            />
+          ) : (
+            <img
+              key={animKey}
+              src={`/book-my-game-reveal.webp?t=${animKey}`}
+              alt="Book My Game Broadcast Logo Reveal"
+              className="w-full h-full object-contain cursor-pointer"
+              onClick={handleReplay}
+              title="Click to replay animation"
+            />
           )}
 
           {/* Video scrub line */}
@@ -123,36 +140,29 @@ export const LogoRevealModal: React.FC<LogoRevealModalProps> = ({ isOpen, onClos
           {/* Playback Controls */}
           <div className="flex items-center space-x-2">
             <button
-              onClick={togglePlay}
-              className="p-2 rounded-xl bg-sport-500/10 hover:bg-sport-500/20 text-sport-400 border border-sport-500/30 transition flex items-center gap-1 text-xs font-bold"
-              title={isPlaying ? 'Pause' : 'Play'}
-            >
-              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current" />}
-              <span className="hidden sm:inline">{isPlaying ? 'Pause' : 'Play'}</span>
-            </button>
-
-            <button
               onClick={handleReplay}
-              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 transition flex items-center gap-1 text-xs font-semibold"
-              title="Replay from start"
+              className="p-2 px-3 rounded-xl bg-sport-500/15 hover:bg-sport-500/25 text-sport-400 border border-sport-500/30 transition flex items-center gap-1.5 text-xs font-bold cursor-pointer"
+              title="Replay animation from start"
             >
               <RotateCcw className="w-4 h-4" />
-              <span className="hidden sm:inline">Replay</span>
+              <span>Replay Intro</span>
             </button>
 
-            <button
-              onClick={toggleMute}
-              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 transition"
-              title={isMuted ? 'Unmute' : 'Mute'}
-            >
-              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            </button>
+            {!useFallback && (
+              <button
+                onClick={toggleMute}
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 transition"
+                title={isMuted ? 'Unmute' : 'Mute'}
+              >
+                {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              </button>
+            )}
           </div>
 
           {/* Info & Download Action */}
           <div className="flex items-center space-x-2">
             <span className="text-[11px] text-slate-400 hidden md:inline">
-              Clean 16:9 • Watermarks Removed • Broadcast Quality
+              Zero Watermarks • 25 FPS Broadcast Motion
             </span>
             <a
               href="/book-my-game-reveal.mp4"
