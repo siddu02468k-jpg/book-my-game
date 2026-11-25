@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { store } from '../db/store';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { Booking } from '../types';
+import { generateOwnerWhatsAppAlert } from '../utils/whatsappNotification';
 
 export const createBooking = (req: AuthenticatedRequest, res: Response): void => {
   try {
@@ -122,6 +123,9 @@ export const createBooking = (req: AuthenticatedRequest, res: Response): void =>
       createdAt: new Date().toISOString()
     };
 
+    const waAlert = generateOwnerWhatsAppAlert(newBooking, venue);
+    newBooking.ownerWhatsAppAlertUrl = waAlert.url;
+
     const saved = store.createBooking(newBooking);
 
     res.status(201).json({
@@ -152,6 +156,25 @@ export const cancelBooking = (req: AuthenticatedRequest, res: Response): void =>
   // Check ownership if user is authenticated
   if (req.userId && booking.userId !== req.userId && req.userId !== 'usr_owner_1') {
     res.status(403).json({ success: false, error: 'Unauthorized to cancel this booking' });
+    return;
+  }
+
+  if (booking.status === 'cancelled') {
+    res.status(400).json({ success: false, error: 'This booking is already cancelled.' });
+    return;
+  }
+
+  // 2-hour prior cancellation policy
+  const bookingDateStr = `${booking.date}T${booking.startHour.toString().padStart(2, '0')}:00:00`;
+  const bookingTime = new Date(bookingDateStr).getTime();
+  const now = Date.now();
+  const diffHours = (bookingTime - now) / (1000 * 60 * 60);
+
+  if (diffHours < 2 && req.userId !== 'usr_owner_1' && req.userId !== 'admin') {
+    res.status(400).json({
+      success: false,
+      error: 'Free cancellation is only allowed up to 2 hours before the booked slot time. Please contact the venue operator directly.'
+    });
     return;
   }
 

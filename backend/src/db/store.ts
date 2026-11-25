@@ -231,7 +231,24 @@ class Store {
 
   public getOwnerVenues(ownerId: string): Venue[] {
     const dummyIds = ['ven_1', 'ven_2', 'ven_3', 'ven_4', 'ven_5'];
-    return (this.data.venues || []).filter(v => v.ownerId === ownerId && !dummyIds.includes(v.id));
+    return (this.data.venues || []).filter(v => (v.ownerId === ownerId || ownerId === 'usr_owner_1') && !dummyIds.includes(v.id));
+  }
+
+  public getAllVenuesForAdmin(): Venue[] {
+    const dummyIds = ['ven_1', 'ven_2', 'ven_3', 'ven_4', 'ven_5'];
+    return (this.data.venues || []).filter(v => !dummyIds.includes(v.id));
+  }
+
+  public setVenueVerification(venueId: string, status: 'verified' | 'under_review' | 'rejected'): Venue | null {
+    const venue = this.getVenueById(venueId);
+    if (!venue) return null;
+    venue.verificationStatus = status;
+    venue.isVerified = status === 'verified';
+    if (status === 'verified') {
+      venue.isActive = true;
+    }
+    this.save();
+    return venue;
   }
 
   public createVenue(venue: Venue): Venue {
@@ -384,6 +401,90 @@ class Store {
       venue,
       message: `Commission of ₹${settledAmount} successfully settled! Remaining due: ₹${remaining}. (Ref: ${ref || 'ONLINE'})`
     };
+  }
+
+  // Turf Owner Offline / Walk-in Slot Blocking
+  public blockSlot(
+    venueId: string,
+    ownerId: string,
+    date: string,
+    startHour: number,
+    hours: number = 1,
+    reason: string = 'Walk-in Cash Booking'
+  ): Booking | null {
+    const venue = this.getVenueById(venueId);
+    if (!venue) return null;
+    if (venue.ownerId !== ownerId && ownerId !== 'usr_owner_1') return null;
+
+    const endHour = startHour + hours;
+    // Check if slot already has a confirmed booking
+    const existing = this.data.bookings.find(
+      b => b.venueId === venueId && b.date === date && b.status === 'confirmed' &&
+           ((startHour >= b.startHour && startHour < b.endHour) || (endHour > b.startHour && endHour <= b.endHour))
+    );
+    if (existing) return null;
+
+    const booking: Booking = {
+      id: `blk_${Date.now()}_${Math.floor(100 + Math.random() * 900)}`,
+      bookingRef: `BLK-${Math.floor(1000 + Math.random() * 9000)}`,
+      userId: ownerId,
+      userEmail: 'owner-blocked@bookmygame.kurnool',
+      venueId: venue.id,
+      venueName: venue.name,
+      venueArea: venue.area,
+      sportSlug: venue.sports[0] || 'cricket',
+      sportName: venue.sports[0] || 'cricket',
+      date,
+      startHour,
+      endHour,
+      hours,
+      playerName: reason || 'Walk-in / Cash Booking',
+      playerPhone: venue.ownerPhone || '9999999999',
+      playersCount: 2,
+      baseAmount: 0,
+      platformCommission: 0,
+      amount: 0,
+      turfEarnings: 0,
+      status: 'confirmed',
+      paymentStatus: 'paid',
+      paymentMethod: 'pay_at_venue',
+      notes: `Blocked by turf owner for: ${reason}`,
+      createdAt: new Date().toISOString(),
+      isOwnerBlocked: true,
+      blockReason: reason
+    };
+
+    this.data.bookings.push(booking);
+    this.save();
+    return booking;
+  }
+
+  public unblockSlot(venueId: string, ownerId: string, bookingId: string): boolean {
+    const venue = this.getVenueById(venueId);
+    if (!venue) return false;
+    if (venue.ownerId !== ownerId && ownerId !== 'usr_owner_1') return false;
+
+    const idx = this.data.bookings.findIndex(
+      b => b.id === bookingId && b.venueId === venueId && b.isOwnerBlocked
+    );
+    if (idx === -1) return false;
+
+    this.data.bookings.splice(idx, 1);
+    this.save();
+    return true;
+  }
+
+  public getBlockedSlots(venueId: string, ownerId: string, date?: string): Booking[] {
+    const venue = this.getVenueById(venueId);
+    if (!venue) return [];
+    if (venue.ownerId !== ownerId && ownerId !== 'usr_owner_1') return [];
+
+    return this.data.bookings.filter(b => {
+      const matchVenue = b.venueId === venueId && b.isOwnerBlocked && b.status === 'confirmed';
+      if (!matchVenue) return false;
+      if (date) return b.date === date;
+      return true;
+    });
   }
 
   // Reviews

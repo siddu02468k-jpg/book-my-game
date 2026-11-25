@@ -64,7 +64,7 @@ export interface Venue {
   governmentIdNumber?: string;
   ownershipDocProof?: string;
   isVerified?: boolean;
-  verificationStatus?: 'verified' | 'pending' | 'under_review';
+  verificationStatus?: 'verified' | 'pending' | 'under_review' | 'rejected';
   googleMapsUrl?: string;
   pitchType?: string;
 
@@ -115,6 +115,9 @@ export interface Booking {
   createdAt: string;
   venueOwnerUpiId?: string;
   commissionSettled?: boolean;
+  isOwnerBlocked?: boolean;
+  blockReason?: string;
+  ownerWhatsAppAlertUrl?: string;
 }
 
 export interface Review {

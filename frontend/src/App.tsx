@@ -13,6 +13,7 @@ import { Breadcrumbs, BreadcrumbItem } from './components/Breadcrumbs';
 import { ToastNotification, ToastMessage } from './components/ToastNotification';
 import { Footer } from './components/Footer';
 import { PolicyModal, PolicyType } from './components/PolicyModal';
+import { PwaInstallBanner } from './components/PwaInstallBanner';
 import { User, Venue, Sport, Booking, BackendHealth } from './types';
 import { api } from './services/api';
 import { initMobileStatusBar, triggerHaptic } from './utils/device';
@@ -409,6 +410,9 @@ export const App: React.FC = () => {
 
       {/* Floating Action Feedback Toasts */}
       <ToastNotification toasts={toasts} onDismiss={removeToast} />
+
+      {/* Progressive Web App Install Banner */}
+      <PwaInstallBanner />
 
       {/* Legal & Policy Modals */}
       <PolicyModal policy={activePolicy} onClose={() => setActivePolicy(null)} />

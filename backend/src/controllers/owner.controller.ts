@@ -306,3 +306,98 @@ export const getSystemHealth = (_req: AuthenticatedRequest, res: Response): void
     data: metrics
   });
 };
+
+export const blockVenueSlot = (req: AuthenticatedRequest, res: Response): void => {
+  const ownerId = req.userId || 'usr_owner_1';
+  const venueId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const { date, startHour, hours = 1, reason = 'Walk-in Cash Booking' } = req.body;
+
+  if (!date || startHour === undefined) {
+    res.status(400).json({ success: false, error: 'date and startHour are required' });
+    return;
+  }
+
+  const blocked = store.blockSlot(venueId, ownerId, date, Number(startHour), Number(hours), reason);
+  if (!blocked) {
+    res.status(409).json({
+      success: false,
+      error: 'Cannot block slot: Either the venue was not found, unauthorized, or this time is already booked.'
+    });
+    return;
+  }
+
+  res.status(201).json({
+    success: true,
+    message: `Slot successfully blocked for ${reason}!`,
+    data: blocked
+  });
+};
+
+export const unblockVenueSlot = (req: AuthenticatedRequest, res: Response): void => {
+  const ownerId = req.userId || 'usr_owner_1';
+  const venueId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const { bookingId } = req.body;
+
+  if (!bookingId) {
+    res.status(400).json({ success: false, error: 'bookingId is required to unblock slot' });
+    return;
+  }
+
+  const unblocked = store.unblockSlot(venueId, ownerId, bookingId);
+  if (!unblocked) {
+    res.status(404).json({
+      success: false,
+      error: 'Blocked slot record not found or not authorized.'
+    });
+    return;
+  }
+
+  res.json({
+    success: true,
+    message: 'Slot unblocked successfully! It is now open for online players.'
+  });
+};
+
+export const getBlockedVenueSlots = (req: AuthenticatedRequest, res: Response): void => {
+  const ownerId = req.userId || 'usr_owner_1';
+  const venueId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const date = req.query.date as string | undefined;
+
+  const list = store.getBlockedSlots(venueId, ownerId, date);
+  res.json({
+    success: true,
+    count: list.length,
+    data: list
+  });
+};
+
+export const getAdminVenues = (_req: AuthenticatedRequest, res: Response): void => {
+  const venues = store.getAllVenuesForAdmin();
+  res.json({
+    success: true,
+    count: venues.length,
+    data: venues
+  });
+};
+
+export const verifyVenueByAdmin = (req: AuthenticatedRequest, res: Response): void => {
+  const venueId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const { status } = req.body; // 'verified' | 'under_review' | 'rejected'
+
+  if (!status || !['verified', 'under_review', 'rejected'].includes(status)) {
+    res.status(400).json({ success: false, error: 'Valid status (verified, under_review, rejected) is required' });
+    return;
+  }
+
+  const updated = store.setVenueVerification(venueId, status);
+  if (!updated) {
+    res.status(404).json({ success: false, error: 'Venue not found' });
+    return;
+  }
+
+  res.json({
+    success: true,
+    message: `Turf facility ${updated.name} verification status updated to: ${status}`,
+    data: updated
+  });
+};

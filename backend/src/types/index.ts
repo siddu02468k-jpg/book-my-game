@@ -55,7 +55,7 @@ export interface Venue {
   governmentIdNumber?: string; // Document / ID number
   ownershipDocProof?: string; // Document proof image (base64 or URL)
   isVerified?: boolean; // Real owner verification status
-  verificationStatus?: 'verified' | 'pending' | 'under_review';
+  verificationStatus?: 'verified' | 'pending' | 'under_review' | 'rejected';
   googleMapsUrl?: string; // Google Maps navigation link
   pitchType?: string; // e.g. "AstroTurf", "Synthetic Rubber", "Clay Court", "Wooden Floor"
 
@@ -105,6 +105,9 @@ export interface Booking {
   createdAt: string;
   venueOwnerUpiId?: string; // Turf owner UPI ID used
   commissionSettled?: boolean; // whether turf owner has paid this commission to platform
+  isOwnerBlocked?: boolean; // blocked manually by turf owner for walk-in/maintenance
+  blockReason?: string; // reason for block, e.g. "Walk-in Cash Booking", "Turf Maintenance"
+  ownerWhatsAppAlertUrl?: string; // Instant WhatsApp alert link for turf owner
 }
 
 export interface Review {

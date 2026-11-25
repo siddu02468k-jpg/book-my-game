@@ -28,7 +28,10 @@ import {
   MapPin,
   BadgeCheck,
   FileText,
-  UploadCloud
+  UploadCloud,
+  Ban,
+  MessageSquare,
+  CalendarDays
 } from 'lucide-react';
 import { Venue, Booking, User } from '../types';
 import { api } from '../services/api';
@@ -239,6 +242,74 @@ export const OwnerPortal: React.FC<OwnerPortalProps> = ({
   // System Health Monitor
   const [healthData, setHealthData] = useState<any>(null);
   const [loadingHealth, setLoadingHealth] = useState<boolean>(false);
+
+  // Offline / Walk-in Slot Blocker State
+  const [blockVenueId, setBlockVenueId] = useState<string>('');
+  const [blockDate, setBlockDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [slotMatrix, setSlotMatrix] = useState<any[]>([]);
+  const [loadingSlotMatrix, setLoadingSlotMatrix] = useState<boolean>(false);
+  const [blockedBookings, setBlockedBookings] = useState<Booking[]>([]);
+  const [slotActionMessage, setSlotActionMessage] = useState<string | null>(null);
+  const [blockingHour, setBlockingHour] = useState<number | null>(null);
+  const [blockReason, setBlockReason] = useState<string>('Walk-in Cash Booking');
+
+  useEffect(() => {
+    if (venues.length > 0 && !blockVenueId) {
+      setBlockVenueId(venues[0].id);
+    }
+  }, [venues, blockVenueId]);
+
+  const loadSlotsForBlocking = async (venueId: string, date: string) => {
+    if (!venueId) return;
+    try {
+      setLoadingSlotMatrix(true);
+      const [slotsData, blockedData] = await Promise.all([
+        api.getVenueSlots(venueId, date),
+        api.getBlockedSlots(venueId, date)
+      ]);
+      setSlotMatrix(slotsData);
+      setBlockedBookings(blockedData || []);
+    } catch (err: any) {
+      console.error('Failed to load slots for blocking:', err);
+    } finally {
+      setLoadingSlotMatrix(false);
+    }
+  };
+
+  useEffect(() => {
+    if (blockVenueId) {
+      loadSlotsForBlocking(blockVenueId, blockDate);
+    }
+  }, [blockVenueId, blockDate]);
+
+  const handleExecuteBlock = async () => {
+    if (!blockVenueId || blockingHour === null) return;
+    try {
+      triggerHaptic();
+      const res = await api.blockSlot(blockVenueId, blockDate, blockingHour, 1, blockReason);
+      setSlotActionMessage(res.message || 'Slot successfully blocked for offline play!');
+      setBlockingHour(null);
+      await loadSlotsForBlocking(blockVenueId, blockDate);
+      onRefreshData();
+      setTimeout(() => setSlotActionMessage(null), 4000);
+    } catch (err: any) {
+      alert(err.message || 'Failed to block slot');
+    }
+  };
+
+  const handleExecuteUnblock = async (bookingId: string) => {
+    if (!blockVenueId || !bookingId) return;
+    try {
+      triggerHaptic();
+      const res = await api.unblockSlot(blockVenueId, bookingId);
+      setSlotActionMessage(res.message || 'Slot unblocked successfully!');
+      await loadSlotsForBlocking(blockVenueId, blockDate);
+      onRefreshData();
+      setTimeout(() => setSlotActionMessage(null), 4000);
+    } catch (err: any) {
+      alert(err.message || 'Failed to unblock slot');
+    }
+  };
 
   const handleLoadHealth = async () => {
     try {
@@ -919,6 +990,169 @@ export const OwnerPortal: React.FC<OwnerPortalProps> = ({
             )}
           </div>
 
+          {/* Offline / Walk-in Slot Blocker Card */}
+          <div className="bg-[#111815] border border-[#1e2923] rounded-2xl p-5 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center space-x-2">
+                <Ban className="w-5 h-5 text-amber-400" />
+                <div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-tight">Offline &amp; Walk-in Slot Blocker</h3>
+                  <p className="text-[11px] text-slate-400">Block slots for cash walk-ins, private tournaments, or court maintenance</p>
+                </div>
+              </div>
+
+              {/* Venue & Date Pickers */}
+              <div className="flex flex-wrap items-center gap-2">
+                {venues.length > 1 && (
+                  <select
+                    value={blockVenueId}
+                    onChange={(e) => setBlockVenueId(e.target.value)}
+                    className="px-2.5 py-1.5 rounded-xl bg-[#0a0f0d] border border-[#1e2923] text-xs text-white focus:outline-none focus:border-sport-500"
+                  >
+                    {venues.map((v) => (
+                      <option key={v.id} value={v.id}>{v.name}</option>
+                    ))}
+                  </select>
+                )}
+                <input
+                  type="date"
+                  value={blockDate}
+                  min={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => setBlockDate(e.target.value)}
+                  className="px-2.5 py-1.5 rounded-xl bg-[#0a0f0d] border border-[#1e2923] text-xs text-white focus:outline-none focus:border-sport-500"
+                />
+              </div>
+            </div>
+
+            {/* Notification message */}
+            {slotActionMessage && (
+              <div className="p-3 rounded-xl bg-sport-500/10 border border-sport-500/40 text-sport-400 text-xs flex items-center space-x-2 animate-in fade-in">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                <span>{slotActionMessage}</span>
+              </div>
+            )}
+
+            {loadingSlotMatrix ? (
+              <div className="py-8 text-center text-xs text-slate-400">Loading live court schedule...</div>
+            ) : slotMatrix.length === 0 ? (
+              <p className="text-xs text-slate-500 py-3 text-center">No operating slots for this date.</p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+                {slotMatrix.map((slot) => {
+                  const blocked = blockedBookings.find(b => slot.hour >= b.startHour && slot.hour < b.endHour);
+                  const isBlockedByOwner = !!blocked;
+
+                  return (
+                    <div
+                      key={slot.hour}
+                      className={`p-3 rounded-xl border flex flex-col justify-between transition ${
+                        isBlockedByOwner
+                          ? 'bg-amber-950/20 border-amber-800/60'
+                          : slot.isBooked
+                          ? 'bg-slate-900/60 border-slate-800'
+                          : 'bg-[#16201b] border-[#1e2923]'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-white">{slot.timeString}</span>
+                          {isBlockedByOwner ? (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-extrabold uppercase">
+                              BLOCKED
+                            </span>
+                          ) : slot.isBooked ? (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-bold uppercase">
+                              ONLINE
+                            </span>
+                          ) : (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-sport-500/20 text-sport-400 font-bold uppercase">
+                              OPEN
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-slate-400 block mt-0.5">
+                          {isBlockedByOwner ? (blocked.blockReason || 'Offline Cash Booking') : slot.isBooked ? 'Customer Booked' : `₹${slot.price}/hr`}
+                        </span>
+                      </div>
+
+                      <div className="pt-2.5 mt-2 border-t border-[#1e2923]/60">
+                        {isBlockedByOwner ? (
+                          <button
+                            onClick={() => handleExecuteUnblock(blocked.id)}
+                            className="w-full py-1 rounded-lg bg-sport-500 hover:bg-sport-400 text-black font-extrabold text-[11px] transition shadow-glow-sm"
+                          >
+                            Unblock Slot
+                          </button>
+                        ) : slot.isBooked ? (
+                          <span className="text-[10px] text-slate-500 italic block text-center">Locked by player</span>
+                        ) : (
+                          <button
+                            onClick={() => setBlockingHour(slot.hour)}
+                            className="w-full py-1 rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500 hover:text-black font-bold text-[11px] border border-amber-500/40 transition"
+                          >
+                            Block (Cash/Maint)
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Quick Modal to Choose Block Reason */}
+          {blockingHour !== null && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+              <div className="bg-[#111815] border border-[#1e2923] p-5 rounded-2xl max-w-sm w-full space-y-4 shadow-2xl">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-black text-white uppercase tracking-tight flex items-center space-x-2">
+                    <Ban className="w-4 h-4 text-amber-400" />
+                    <span>Block Slot: {blockingHour}:00 - {blockingHour + 1}:00</span>
+                  </h4>
+                  <button onClick={() => setBlockingHour(null)} className="text-slate-400 hover:text-white">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Select the reason why this slot cannot be booked by online players on {blockDate}:
+                </p>
+                <div className="space-y-2">
+                  {['Walk-in Cash Booking', 'Turf / Net Maintenance', 'Private Tournament / Event', 'Owner Personal Use'].map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setBlockReason(r)}
+                      className={`w-full p-2.5 rounded-xl text-xs font-semibold text-left border transition ${
+                        blockReason === r
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-500'
+                          : 'bg-[#0a0f0d] text-slate-300 border-[#1e2923] hover:border-slate-700'
+                      }`}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex space-x-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleExecuteBlock}
+                    className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs transition shadow-glow-sm"
+                  >
+                    Confirm Block
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBlockingHour(null)}
+                    className="px-4 py-2.5 rounded-xl bg-[#16201b] text-slate-300 border border-[#1e2923] text-xs font-bold"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Customer Reservations Table */}
           <div className="bg-[#111815] border border-[#1e2923] rounded-2xl p-5 space-y-4">
             <h3 className="text-sm font-black text-white uppercase tracking-tight">Customer Reservations</h3>
@@ -954,7 +1188,21 @@ export const OwnerPortal: React.FC<OwnerPortalProps> = ({
                           <td className="py-3 font-medium text-slate-300">{b.venueName}</td>
                           <td className="py-3">
                             <span className="text-white block font-medium">{b.playerName}</span>
-                            <span className="text-[11px] text-slate-400">{b.playerPhone}</span>
+                            <div className="flex items-center space-x-1.5 mt-0.5">
+                              <span className="text-[11px] text-slate-400">{b.playerPhone}</span>
+                              {b.playerPhone && !b.isOwnerBlocked && (
+                                <a
+                                  href={`https://api.whatsapp.com/send?phone=${b.playerPhone.replace(/[^0-9]/g, '').startsWith('91') ? b.playerPhone.replace(/[^0-9]/g, '') : '91' + b.playerPhone.replace(/[^0-9]/g, '')}&text=${encodeURIComponent(`Hi ${b.playerName}, this is ${b.venueName} (Kurnool). Your slot on ${b.date} from ${b.startHour}:00 to ${b.endHour}:00 is confirmed! (Ref: ${b.bookingRef}). Let us know if you need anything before arrival.`)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800/40 hover:bg-emerald-900/60 text-[10px] font-semibold transition"
+                                  title="Contact Player on WhatsApp"
+                                >
+                                  <MessageSquare className="w-2.5 h-2.5" />
+                                  <span>WhatsApp</span>
+                                </a>
+                              )}
+                            </div>
                           </td>
                           <td className="py-3 font-black text-white">₹{b.amount}</td>
                           <td className="py-3 font-bold text-emerald-400">₹{turfCut}</td>

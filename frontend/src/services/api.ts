@@ -345,6 +345,39 @@ class ApiService {
     });
   }
 
+  public async blockSlot(venueId: string, date: string, startHour: number, hours: number = 1, reason: string = 'Walk-in Cash Booking'): Promise<any> {
+    return await this.request(`/api/owner/venues/${venueId}/block-slot`, {
+      method: 'POST',
+      body: JSON.stringify({ date, startHour, hours, reason }),
+    });
+  }
+
+  public async unblockSlot(venueId: string, bookingId: string): Promise<any> {
+    return await this.request(`/api/owner/venues/${venueId}/unblock-slot`, {
+      method: 'POST',
+      body: JSON.stringify({ bookingId }),
+    });
+  }
+
+  public async getBlockedSlots(venueId: string, date?: string): Promise<Booking[]> {
+    const query = date ? `?date=${date}` : '';
+    const res = await this.request<{ success: boolean; data: Booking[] }>(`/api/owner/venues/${venueId}/blocked-slots${query}`);
+    return res.data;
+  }
+
+  public async getAdminVenues(): Promise<Venue[]> {
+    const res = await this.request<{ success: boolean; data: Venue[] }>('/api/owner/admin/venues');
+    return res.data;
+  }
+
+  public async verifyVenueByAdmin(venueId: string, status: 'verified' | 'under_review' | 'rejected'): Promise<Venue> {
+    const res = await this.request<{ success: boolean; data: Venue }>(`/api/owner/admin/venues/${venueId}/verify`, {
+      method: 'PUT',
+      body: JSON.stringify({ status })
+    });
+    return res.data;
+  }
+
   public async getOwnerBookings(): Promise<Booking[]> {
     const res = await this.request<{ success: boolean; data: Booking[] }>('/api/owner/bookings');
     return res.data;
